@@ -75,3 +75,15 @@ crashlytics-build.properties
 
 # Demo scenes
 \Primer Test\Assets\Scenes-base*
+
+# Unity generated
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Uu]serSettings/
+MemoryCaptures/
+
+# OS específicos
+.DS_Store
+Thumbs.db
