@@ -1,0 +1,7 @@
+# Ignora toda la carpeta Logs dentro de "VR Room"
+/VR Room/Logs/
+
+# —o si eso no funciona— usa este patrón recursivo
+**/VR Room/Logs/
+# Ignorar TODO el contenido de VR Room/Logs
+/VR Room/Logs/**

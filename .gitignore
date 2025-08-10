@@ -87,3 +87,8 @@ MemoryCaptures/
 # OS específicos
 .DS_Store
 Thumbs.db
+*.log
+Create-with-VR_2022LTS/VR Room/Logs/
+
+# Ignorar TODO el contenido de VR Room/Logs
+/VR Room/Logs/**
