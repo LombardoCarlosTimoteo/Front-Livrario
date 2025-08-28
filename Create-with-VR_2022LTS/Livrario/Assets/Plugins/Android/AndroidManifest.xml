@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    package="${applicationId}">
+
+	<!-- GLES3 (Unity lo incluye normalmente, lo dejamos explícito) -->
+	<uses-feature android:glEsVersion="0x00030000" android:required="true" />
+
+	<!-- Teclado del sistema en Quest -->
+	<uses-feature
+        android:name="oculus.software.overlay_keyboard"
+        android:required="false"
+        tools:node="merge" />
+
+	<!-- Internet para tu login -->
+	<uses-permission android:name="android.permission.INTERNET" />
+
+	<application
+        android:label="@string/app_name"
+        android:icon="@mipmap/app_icon"
+        android:extractNativeLibs="true"
+        android:usesCleartextTraffic="true">
+
+		<!-- ACTIVIDAD PRINCIPAL DE UNITY (¡imprescindible!) -->
+		<activity
+            android:name="com.unity3d.player.UnityPlayerActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:screenOrientation="${screenOrientation}"
+            android:resizeableActivity="${resizeableActivity}"
+            android:clearTaskOnLaunch="true"
+            android:hardwareAccelerated="true"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize|uiMode|fontScale|layoutDirection|density">
+
+			<intent-filter>
+				<action android:name="android.intent.action.MAIN" />
+				<category android:name="android.intent.category.LAUNCHER" />
+				<!-- Opcional pero habitual en Quest -->
+				<category android:name="com.oculus.intent.category.VR" />
+			</intent-filter>
+
+			<!-- Marca esta Activity como la de Unity -->
+			<meta-data android:name="unityplayer.UnityActivity" android:value="true" />
+		</activity>
+
+		<!-- Deja que los plugins (Oculus XR, etc.) añadan su meta-data vía merge -->
+	</application>
+</manifest>
