@@ -24,7 +24,7 @@ public class RegisterUI : MonoBehaviour
     public TextMeshProUGUI txtEstado;
 
     [Header("Backend")]
-    public string registerUrl = "http://101.44.12.140:8000/api/auth/register/";
+    public string registerUrl = "https://login.nicolasirigoyen.com.ar/api/auth/register/";
 
     void Awake()
     {
