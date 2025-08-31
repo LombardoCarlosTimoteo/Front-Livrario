@@ -1,6 +1,4 @@
-using System;
 using System.Collections;
-using System.Globalization;
 using System.Text;
 using TMPro;
 using UnityEngine;
@@ -10,154 +8,196 @@ using UnityEngine.UI;
 public class RegisterUI : MonoBehaviour
 {
     [Header("Inputs")]
-    public TMP_InputField inputFirstName;
-    public TMP_InputField inputLastName;
-    public TMP_InputField inputUsername;
-    public TMP_InputField inputEmail;
-    public TMP_InputField inputPassword;
-    public TMP_InputField inputPasswordConfirm;
-    public TMP_InputField inputFechaNacimiento; // YYYY-MM-DD
+    [SerializeField] TMP_InputField InputFirstName;
+    [SerializeField] TMP_InputField InputLastName;
+    [SerializeField] TMP_InputField InputUsername;
+    [SerializeField] TMP_InputField InputFechaNacimiento;   // YYYY-MM-DD
+    [SerializeField] TMP_InputField InputEmail;
+    [SerializeField] TMP_InputField InputPassword;
+    [SerializeField] TMP_InputField InputConfirmPassword;
 
-    [Header("UI")]
-    public Button btnEnviar;
-    public Button btnVolver;
-    public TextMeshProUGUI txtEstado;
+    [Header("Botones")]
+    [SerializeField] Button BtnEnviarRegistro;
+
+    [Header("UI Estado (opcional)")]
+    [SerializeField] TextMeshProUGUI txtEstado;
+
+    [Header("Navegación")]
+    [SerializeField] UIAuthSwitcher switcher;          // arrastrá el mismo del Canvas
+    [SerializeField] GameObject loginRootFallback;     // opcional: GO raíz del login si no usás switcher
 
     [Header("Backend")]
-    public string registerUrl = "https://login.nicolasirigoyen.com.ar/api/auth/register/";
+    [SerializeField] string registerUrl = "https://login.nicolasirigoyen.com.ar/api/auth/register/";
+
+    const int TimeoutSec = 12;
 
     void Awake()
     {
-        if (btnEnviar) btnEnviar.onClick.AddListener(() => StartCoroutine(DoRegister()));
+        if (BtnEnviarRegistro) BtnEnviarRegistro.onClick.AddListener(OnClickEnviarRegistro);
+    }
+
+    void OnClickEnviarRegistro()
+    {
+        StartCoroutine(DoRegister());
     }
 
     IEnumerator DoRegister()
     {
-        string fn  = inputFirstName?.text.Trim() ?? "";
-        string ln  = inputLastName?.text.Trim() ?? "";
-        string un  = inputUsername?.text.Trim() ?? "";
-        string em  = inputEmail?.text.Trim() ?? "";
-        string pw  = inputPassword?.text ?? "";
-        string pw2 = inputPasswordConfirm?.text ?? "";
-        string dob = inputFechaNacimiento?.text.Trim() ?? "";
+        // URL saneada
+        string url = string.IsNullOrWhiteSpace(registerUrl) ? "" : registerUrl.Trim();
+        if (string.IsNullOrEmpty(url))
+        {
+            SetEstado("URL de registro vacía.");
+            yield break;
+        }
+        if (!url.EndsWith("/")) url += "/";
 
-        // Validaciones
-        if (string.IsNullOrEmpty(fn) || string.IsNullOrEmpty(ln) ||
-            string.IsNullOrEmpty(un) || string.IsNullOrEmpty(em) ||
-            string.IsNullOrEmpty(pw) || string.IsNullOrEmpty(pw2) ||
-            string.IsNullOrEmpty(dob))
+        // Validaciones mínimas
+        if (string.IsNullOrWhiteSpace(InputFirstName.text) ||
+            string.IsNullOrWhiteSpace(InputLastName.text) ||
+            string.IsNullOrWhiteSpace(InputUsername.text) ||
+            string.IsNullOrWhiteSpace(InputFechaNacimiento.text) ||
+            string.IsNullOrWhiteSpace(InputEmail.text) ||
+            string.IsNullOrEmpty(InputPassword.text) ||
+            string.IsNullOrEmpty(InputConfirmPassword.text))
         {
-            MostrarError("Completá todos los campos.");
-            yield break;
-        }
-        if (pw != pw2)
-        {
-            MostrarError("Las contraseñas no coinciden.");
-            yield break;
-        }
-        if (!DateTime.TryParseExact(dob, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out _))
-        {
-            MostrarError("Fecha inválida. Formato: YYYY-MM-DD (ej. 1992-05-10)");
+            SetEstado("Completá todos los campos.");
             yield break;
         }
 
-        var payload = new RegisterReq {
-            first_name    = fn,
-            last_name     = ln,
-            username      = un,
-            email         = em,
-            password      = pw,
-            password2     = pw2,
-            date_of_birth = dob
+        if (InputPassword.text != InputConfirmPassword.text)
+        {
+            SetEstado("Las contraseñas no coinciden.");
+            yield break;
+        }
+
+        // Cuerpo JSON EXACTO que espera tu backend
+        var payload = new RegisterReq
+        {
+            first_name = InputFirstName.text.Trim(),
+            last_name = InputLastName.text.Trim(),
+            username = InputUsername.text.Trim(),
+            email = InputEmail.text.Trim(),
+            password = InputPassword.text,
+            password2 = InputConfirmPassword.text,
+            date_of_birth = InputFechaNacimiento.text.Trim() // formato: YYYY-MM-DD
         };
-
         string json = JsonUtility.ToJson(payload);
 
-        using (var req = new UnityWebRequest(registerUrl, "POST"))
+        // UI feedback
+        SetInteractable(false);
+        SetEstado("Creando cuenta...");
+
+        using (var req = new UnityWebRequest(url, "POST"))
         {
-            req.uploadHandler   = new UploadHandlerRaw(Encoding.UTF8.GetBytes(json));
+            req.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(json));
             req.downloadHandler = new DownloadHandlerBuffer();
             req.SetRequestHeader("Content-Type", "application/json");
+            req.timeout = TimeoutSec;
 
-            SetInteractable(false);
-            SetEstado("Enviando...");
-
+            Debug.Log($"[Register] POST -> {url}\nBody: {json}");
             yield return req.SendWebRequest();
+
             SetInteractable(true);
 
-            string body = req.downloadHandler?.text ?? "";
+            long code = (long)req.responseCode;
+            string body = req.downloadHandler != null ? req.downloadHandler.text : "";
 
-            if (req.result == UnityWebRequest.Result.Success && (req.responseCode == 201 || req.responseCode == 200))
+            if (req.result == UnityWebRequest.Result.Success && code >= 200 && code < 300)
             {
-                var ok = JsonUtility.FromJson<RegisterResp>(body);
-                Debug.Log($"[Register OK] {body}");
-                SetEstado($"¡Cuenta creada! Bienvenido {ok.first_name} {ok.last_name}");
+                Debug.Log($"[Register OK] code={code}, body={body}");
+                SetEstado("¡Cuenta creada! Iniciá sesión.");
 
-                // Cambiar a la pantalla de login después de un pequeño delay
-                yield return new WaitForSeconds(1f);
-                FindObjectOfType<UIAuthSwitcher>()?.ShowLogin();
-            }
-            else if (req.responseCode == 400 && !string.IsNullOrEmpty(body))
-            {
-                string msg = BuildReadableError(body);
-                MostrarError(msg);
+                // Ir a Login
+                if (switcher != null)
+                {
+                    switcher.ShowLogin();
+                }
+                else if (loginRootFallback != null)
+                {
+                    // Si usás un root alternativo:
+                    // apagá mis hermanos y prendé el login
+                    var parent = loginRootFallback.transform.parent;
+                    if (parent)
+                    {
+                        foreach (Transform child in parent) child.gameObject.SetActive(false);
+                    }
+                    loginRootFallback.SetActive(true);
+                }
+                else
+                {
+                    Debug.LogWarning("[Register] No hay UIAuthSwitcher ni loginRootFallback asignados.");
+                }
             }
             else
             {
-                MostrarError($"Error {req.responseCode}: {req.error}");
+                // Parseo simple de errores 400 (ejemplo de tu backend)
+                // {"username":["A user with that username already exists."],"email":["user with this email already exists."],"date_of_birth":["Date has wrong format. Use YYYY-MM-DD."]}
+                string msgBonito = PrettyErrors(body);
+                Debug.LogError($"[Register] Error code={code}, err={req.error}, body={body}");
+                SetEstado(string.IsNullOrEmpty(msgBonito) ? $"Error {code}" : msgBonito);
             }
         }
     }
 
-    void MostrarError(string mensaje)
+    // ----------------- Helpers -----------------
+
+    void SetEstado(string m)
     {
-        Debug.LogError($"[Register ERROR] {mensaje}");
-        SetEstado(mensaje);
+        if (txtEstado) txtEstado.text = m;
     }
 
-    string BuildReadableError(string json)
-    {
-        try
-        {
-            var err = JsonUtility.FromJson<RegisterErr>(json);
-            var sb = new StringBuilder();
-
-            if (err.username != null && err.username.Length > 0)
-                sb.AppendLine($"Usuario: {string.Join(" ", err.username)}");
-            if (err.email != null && err.email.Length > 0)
-                sb.AppendLine($"Email: {string.Join(" ", err.email)}");
-            if (err.date_of_birth != null && err.date_of_birth.Length > 0)
-                sb.AppendLine($"Fecha de nacimiento: {string.Join(" ", err.date_of_birth)}");
-
-            return sb.Length > 0 ? sb.ToString().TrimEnd() : $"Error: {json}";
-        }
-        catch
-        {
-            return $"Error: {json}";
-        }
-    }
-
-    void SetEstado(string m) { if (txtEstado) txtEstado.text = m; }
     void SetInteractable(bool on)
     {
-        if (btnEnviar) btnEnviar.interactable = on;
-        if (btnVolver) btnVolver.interactable = on;
+        if (BtnEnviarRegistro) BtnEnviarRegistro.interactable = on;
     }
 
-    [Serializable] class RegisterReq
+    // Intenta mostrar un mensaje amigable si el backend devolvió un JSON con listas de errores por campo
+    string PrettyErrors(string raw)
     {
-        public string first_name, last_name, username, email, password, password2, date_of_birth;
+        if (string.IsNullOrEmpty(raw)) return "";
+        // Como JsonUtility no maneja diccionarios, hacemos un parseo MUY simple
+        // para casos típicos (no es un parser general):
+        // Busca cadenas tipo: "username":[ "mensaje" ]
+        StringBuilder sb = new StringBuilder();
+
+        AppendIfFound(sb, raw, "first_name", "Nombre:");
+        AppendIfFound(sb, raw, "last_name", "Apellido:");
+        AppendIfFound(sb, raw, "username", "Usuario:");
+        AppendIfFound(sb, raw, "email", "Email:");
+        AppendIfFound(sb, raw, "password", "Contraseña:");
+        AppendIfFound(sb, raw, "password2", "Confirmación:");
+        AppendIfFound(sb, raw, "date_of_birth", "Fecha:");
+
+        return sb.ToString().Trim();
     }
 
-    [Serializable] class RegisterResp
+    void AppendIfFound(StringBuilder sb, string raw, string key, string label)
     {
-        public string first_name, last_name, username, email, date_of_birth;
+        // Busca "key":[ "algo" ]
+        // Esta extracción es naive y funciona para el formato devuelto por tu backend de ejemplo
+        string marker = $"\"{key}\":[";
+        int i = raw.IndexOf(marker);
+        if (i < 0) return;
+        int start = raw.IndexOf('"', i + marker.Length);
+        if (start < 0) return;
+        int end = raw.IndexOf('"', start + 1);
+        if (end <= start) return;
+        string msg = raw.Substring(start + 1, end - start - 1);
+        if (sb.Length > 0) sb.AppendLine();
+        sb.Append($"{label} {msg}");
     }
 
-    [Serializable] class RegisterErr
+    // DTO exacto
+    [System.Serializable]
+    class RegisterReq
     {
-        public string[] username;
-        public string[] email;
-        public string[] date_of_birth;
+        public string first_name;
+        public string last_name;
+        public string username;
+        public string email;
+        public string password;
+        public string password2;
+        public string date_of_birth;
     }
 }

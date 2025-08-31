@@ -1,6 +1,5 @@
-using System;
+Ôªøusing System;
 using System.Collections;
-using System.Text;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -9,129 +8,218 @@ using UnityEngine.UI;
 public class MainMenuUI : MonoBehaviour
 {
     [Header("UI")]
-    [SerializeField] TextMeshProUGUI TextBienvenido;       // tu "TextBienvenido"
-    [SerializeField] TextMeshProUGUI txtEstado;            // opcional: para mensajes tipo "Cerrando sesiÛn..."
-    [SerializeField] Button BtnCargarLibro;                // opcional si conect·s por OnClick en Inspector
+    [SerializeField] TextMeshProUGUI TextBienvenido;
+    [SerializeField] TextMeshProUGUI txtEstado;
+    [SerializeField] Button BtnCargarLibro;
     [SerializeField] Button BtnBiblioteca;
     [SerializeField] Button BtnCerrarSesion;
 
-    [Header("NavegaciÛn / Panels")]
-    [SerializeField] UIAuthSwitcher switcher;              // arrastr· el mismo del Canvas
-    [SerializeField] GameObject panelBiblioteca;           // opcional
+    [Header("Navegaci√≥n / Panels")]
+    [SerializeField] UIAuthSwitcher switcher;
+    [SerializeField] GameObject panelBiblioteca;
 
     [Header("Backend")]
     [SerializeField] string logoutUrl = "https://login.nicolasirigoyen.com.ar/api/auth/logout/";
-    [SerializeField] string refreshUrl = "https://login.nicolasirigoyen.com.ar/api/auth/token/refresh/"; // para renovar access si hace falta
+    [SerializeField] string refreshUrl = "https://login.nicolasirigoyen.com.ar/api/auth/token/refresh/";
+
+    [Header("Debug")]
+    [SerializeField] bool verboseLogging = true;   // ‚Üê marc√° esto en el Inspector si quer√©s m√°s logs
 
     const int TimeoutSec = 12;
+    Coroutine welcomeRetryCo;
 
     void Awake()
     {
+        if (!switcher) switcher = FindObjectOfType<UIAuthSwitcher>(true);
+
         if (BtnCargarLibro) BtnCargarLibro.onClick.AddListener(OnClickCargarLibro);
         if (BtnBiblioteca) BtnBiblioteca.onClick.AddListener(OnClickBiblioteca);
         if (BtnCerrarSesion) BtnCerrarSesion.onClick.AddListener(OnClickCerrarSesion);
+
+        if (TextBienvenido) TextBienvenido.raycastTarget = false;
     }
 
     void OnEnable()
     {
-        string first = !string.IsNullOrEmpty(UserSession.firstName)
-            ? UserSession.firstName
-            : PlayerPrefs.GetString("user_first_name", "");
-
-        string last = !string.IsNullOrEmpty(UserSession.lastName)
-            ? UserSession.lastName
-            : PlayerPrefs.GetString("user_last_name", "");
-
-        string nombre = (first + " " + last).Trim();
-        if (string.IsNullOrEmpty(nombre)) nombre = "usuario";
-
-        if (TextBienvenido)
-            TextBienvenido.text = $"Bienvenido a Livrario, {nombre}";
-    }
-
-    // ------------------ Acciones de botones ------------------
-
-    public void OnClickCargarLibro()
-    {
-        Debug.Log("[MainMenu] Cargar Libro: TODO implementar selector/flujo de PDF en Quest.");
-    }
-
-    public void OnClickBiblioteca()
-    {
-        if (panelBiblioteca != null)
+        if (verboseLogging)
         {
-            gameObject.SetActive(false);
-            panelBiblioteca.SetActive(true);
+            Debug.Log($"[MainMenuUI] OnEnable. UserSession: " +
+                      $"first='{UserSession.firstName}', last='{UserSession.lastName}', " +
+                      $"username='{UserSession.username}', email='{UserSession.email}'. " +
+                      $"Prefs first='{PlayerPrefs.GetString("user_first_name", "")}', last='{PlayerPrefs.GetString("user_last_name", "")}'.");
+        }
+
+        bool ok = UpdateWelcomeImmediate();
+        StartCoroutine(RefreshWelcomeEndOfFrame());
+
+        if (!ok)
+        {
+            if (welcomeRetryCo != null) StopCoroutine(welcomeRetryCo);
+            welcomeRetryCo = StartCoroutine(WelcomeRetry());
+        }
+
+        StartCoroutine(RefreshWelcomeAfterDelay(0.5f));
+    }
+
+    void OnDisable()
+    {
+        if (welcomeRetryCo != null)
+        {
+            StopCoroutine(welcomeRetryCo);
+            welcomeRetryCo = null;
+        }
+    }
+
+    // <-- M√©todo que llama LoginUI despu√©s de navegar
+    public void ForceRefreshWelcome()
+    {
+        if (verboseLogging) Debug.Log("[MainMenuUI] ForceRefreshWelcome() llamado.");
+        if (!UpdateWelcomeImmediate())
+        {
+            if (welcomeRetryCo != null) StopCoroutine(welcomeRetryCo);
+            welcomeRetryCo = StartCoroutine(WelcomeRetry());
+        }
+    }
+
+    // <-- Alias por compatibilidad si en alg√∫n lado qued√≥ RefreshWelcome()
+    public void RefreshWelcome() => ForceRefreshWelcome();
+
+    IEnumerator RefreshWelcomeEndOfFrame()
+    {
+        yield return null;
+        UpdateWelcomeImmediate();
+    }
+
+    IEnumerator RefreshWelcomeAfterDelay(float seconds)
+    {
+        yield return new WaitForSeconds(seconds);
+        UpdateWelcomeImmediate();
+    }
+
+    bool UpdateWelcomeImmediate()
+    {
+        if (!TextBienvenido)
+        {
+            Debug.LogWarning("[MainMenuUI] TextBienvenido NO asignado en el Inspector.");
+            return false;
+        }
+
+        // 1) Intento con memoria
+        string first = UserSession.firstName;
+        string last = UserSession.lastName;
+
+        // 2) Si falta, intento levantar de Prefs
+        if (string.IsNullOrWhiteSpace(first) && string.IsNullOrWhiteSpace(last))
+        {
+            bool had = UserSession.LoadProfileFromPrefsIfAvailable();
+            if (verboseLogging) Debug.Log($"[MainMenuUI] Perfil cacheado cargado={had}");
+
+            first = string.IsNullOrWhiteSpace(UserSession.firstName) ? PlayerPrefs.GetString("user_first_name", "") : UserSession.firstName;
+            last = string.IsNullOrWhiteSpace(UserSession.lastName) ? PlayerPrefs.GetString("user_last_name", "") : UserSession.lastName;
+        }
+
+        string nombre = ((first ?? "") + " " + (last ?? "")).Trim();
+
+        if (string.IsNullOrWhiteSpace(nombre))
+        {
+            // 3) Fallback: username/email
+            string fallback = !string.IsNullOrWhiteSpace(UserSession.username) ? UserSession.username
+                            : !string.IsNullOrWhiteSpace(UserSession.email) ? UserSession.email
+                            : PlayerPrefs.GetString("user_username", "");
+
+            if (string.IsNullOrWhiteSpace(fallback))
+                fallback = PlayerPrefs.GetString("user_email", "");
+
+            if (string.IsNullOrWhiteSpace(fallback))
+            {
+                if (verboseLogging) Debug.Log("[MainMenuUI] Sin datos a√∫n para bienvenida.");
+                return false;
+            }
+
+            TextBienvenido.text = $"Bienvenido a Livrario, {fallback}";
+            if (verboseLogging) Debug.Log($"[MainMenuUI] Bienvenida (fallback): '{TextBienvenido.text}'");
+            return true;
         }
         else
         {
-            Debug.Log("[MainMenu] PanelBiblioteca no asignado (opcional).");
+            TextBienvenido.text = $"Bienvenido a Livrario, {nombre}";
+            if (verboseLogging) Debug.Log($"[MainMenuUI] Bienvenida: '{TextBienvenido.text}'");
+            return true;
         }
     }
 
-    public void OnClickCerrarSesion()
+    IEnumerator WelcomeRetry()
     {
-        StartCoroutine(DoLogout());
+        const int tries = 10;
+        const float delay = 0.2f;
+
+        for (int i = 0; i < tries; i++)
+        {
+            if (UpdateWelcomeImmediate())
+                yield break;
+
+            yield return new WaitForSeconds(delay);
+        }
+
+        if (TextBienvenido && string.IsNullOrWhiteSpace(TextBienvenido.text))
+        {
+            TextBienvenido.text = "Bienvenido a Livrario";
+            if (verboseLogging) Debug.Log("[MainMenuUI] Bienvenida gen√©rica por timeout.");
+        }
     }
 
-    // ------------------ LÛgica de logout ------------------
+    // -------- Botones --------
+    public void OnClickCargarLibro() => Debug.Log("[MainMenu] TODO: flujo de carga de libro.");
+    public void OnClickBiblioteca()
+    {
+        if (panelBiblioteca) { gameObject.SetActive(false); panelBiblioteca.SetActive(true); }
+        else Debug.Log("[MainMenu] panelBiblioteca no asignado.");
+    }
+    public void OnClickCerrarSesion() => StartCoroutine(DoLogout());
 
+    // -------- Logout --------
     IEnumerator DoLogout()
     {
         string url = string.IsNullOrWhiteSpace(logoutUrl) ? "" : logoutUrl.Trim();
-        if (string.IsNullOrEmpty(url))
-        {
-            Debug.LogError("[Logout] logoutUrl vacÌo.");
-            yield break;
-        }
+        if (string.IsNullOrEmpty(url)) { Debug.LogError("[Logout] logoutUrl vac√≠o."); yield break; }
         if (!url.EndsWith("/")) url += "/";
 
-        // Aseguramos refresh en memoria (lo tomamos de UserSession o de TokenManager)
         string refresh = UserSession.refresh;
         if (string.IsNullOrEmpty(refresh))
         {
             if (TokenManager.TryLoadTokens(out var acc, out var refTok))
             {
-                UserSession.access = string.IsNullOrEmpty(UserSession.access) ? acc : UserSession.access;
+                if (string.IsNullOrEmpty(UserSession.access)) UserSession.access = acc;
                 refresh = refTok;
             }
         }
         if (string.IsNullOrEmpty(refresh))
         {
-            Debug.LogWarning("[Logout] No hay refresh token disponible. Vuelvo al login sin pegarle al backend.");
+            Debug.LogWarning("[Logout] No hay refresh. Limpio local y vuelvo al login.");
             GoToLoginAndClearLocal();
             yield break;
         }
 
-        // (Opcional) renovar access si est· vencido, asÌ el backend acepta el Bearer
         if (!string.IsNullOrEmpty(refreshUrl))
         {
             bool ensured = false;
             yield return TokenRefresh.EnsureValidAccess(refreshUrl, ok => ensured = ok);
-            if (!ensured)
-            {
-                Debug.LogWarning("[Logout] No se pudo asegurar access v·lido. Intento logout de todos modos.");
-            }
+            if (!ensured) Debug.LogWarning("[Logout] No pude asegurar access v√°lido; intento igual.");
         }
 
-        // Cuerpo JSON con el refresh
         var payload = new LogoutReq { refresh = refresh };
         string json = JsonUtility.ToJson(payload);
 
-        // UI feedback
         SetInteractable(false);
-        SetEstado("Cerrando sesiÛn...");
+        SetEstado("Cerrando sesi√≥n...");
 
         using (var req = new UnityWebRequest(url, "POST"))
         {
-            req.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(json));
+            req.uploadHandler = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(json));
             req.downloadHandler = new DownloadHandlerBuffer();
             req.SetRequestHeader("Content-Type", "application/json");
-
-            // Autoriza con Bearer access si lo tenemos
             if (!string.IsNullOrEmpty(UserSession.access))
                 req.SetRequestHeader("Authorization", "Bearer " + UserSession.access);
-
             req.timeout = TimeoutSec;
 
             Debug.Log($"[Logout] POST -> {url}\nBody: {json}");
@@ -149,24 +237,16 @@ public class MainMenuUI : MonoBehaviour
             {
                 var body = req.downloadHandler != null ? req.downloadHandler.text : "(sin cuerpo)";
                 Debug.LogError($"[Logout] Error code={(long)req.responseCode}, err={req.error}, body={body}");
-
-                // Si querÈs forzar logout local aunque el backend falle:
-                // GoToLoginAndClearLocal();
-                // yield break;
-
-                // Por ahora avisamos y mantenemos sesiÛn local
-                SetEstado($"Error al cerrar sesiÛn: {(long)req.responseCode}");
+                SetEstado($"Error al cerrar sesi√≥n: {(long)req.responseCode}");
             }
         }
     }
 
     void GoToLoginAndClearLocal()
     {
-        // Limpia tokens cifrados y perfil
         TokenManager.ClearTokens();
         UserSession.ClearProfilePrefs();
 
-        // Limpia sesiÛn en memoria
         UserSession.access = null;
         UserSession.refresh = null;
         UserSession.firstName = null;
@@ -176,18 +256,13 @@ public class MainMenuUI : MonoBehaviour
         UserSession.dateOfBirth = null;
         UserSession.id = 0;
 
-        // Cambia a panel login
         if (switcher) switcher.ShowLogin();
         else Debug.LogWarning("[Logout] UIAuthSwitcher no asignado.");
 
-        SetEstado("SesiÛn cerrada.");
+        SetEstado("Sesi√≥n cerrada.");
     }
 
-    void SetEstado(string m)
-    {
-        if (txtEstado) txtEstado.text = m;
-    }
-
+    void SetEstado(string m) { if (txtEstado) txtEstado.text = m; }
     void SetInteractable(bool on)
     {
         if (BtnCargarLibro) BtnCargarLibro.interactable = on;

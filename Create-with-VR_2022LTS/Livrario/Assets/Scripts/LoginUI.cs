@@ -343,6 +343,8 @@ public class LoginUI : MonoBehaviour
         {
             Debug.Log("[LoginUI] UIAuthSwitcher.ShowMainMenu()");
             switcher.ShowMainMenu();
+            FindObjectOfType<MainMenuUI>(true)?.ForceRefreshWelcome();
+
         }
         else if (panelMainMenu != null)
         {
@@ -357,6 +359,16 @@ public class LoginUI : MonoBehaviour
         else
         {
             Debug.LogWarning("[LoginUI] No hay UIAuthSwitcher ni panelMainMenu asignados.");
+        }
+        var mm = FindObjectOfType<MainMenuUI>(true);
+        if (mm != null)
+        {
+            Debug.Log("[LoginUI] Llamo MainMenuUI.ForceRefreshWelcome() post-navegación.");
+            mm.ForceRefreshWelcome();
+        }
+        else
+        {
+            Debug.LogWarning("[LoginUI] No encontré MainMenuUI para refrescar bienvenida.");
         }
 
         // Si este script vive en el PanelLogin, lo ocultamos:

@@ -1565,7 +1565,6 @@ GameObject:
   - component: {fileID: 148479871}
   - component: {fileID: 148479870}
   - component: {fileID: 148479869}
-  - component: {fileID: 148479873}
   m_Layer: 5
   m_Name: PanelMainMenu
   m_TagString: Untagged
@@ -1658,27 +1657,6 @@ RectTransform:
   m_AnchoredPosition: {x: 230.71526, y: -170.4}
   m_SizeDelta: {x: 461.4305, y: 340.8}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &148479873
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 148479868}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b1a4fbf815277954cbc09a8235436574, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  TextBienvenido: {fileID: 1712851607}
-  txtEstado: {fileID: 0}
-  BtnCargarLibro: {fileID: 255386651}
-  BtnBiblioteca: {fileID: 1126805435}
-  BtnCerrarSesion: {fileID: 158048523}
-  switcher: {fileID: 649800822}
-  panelBiblioteca: {fileID: 0}
-  logoutUrl: https://login.nicolasirigoyen.com.ar/api/auth/logout/
-  refreshUrl: https://login.nicolasirigoyen.com.ar/api/auth/token/refresh/
 --- !u!1 &158048521
 GameObject:
   m_ObjectHideFlags: 0
@@ -1715,8 +1693,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 377.85876, y: -87.7}
-  m_SizeDelta: {x: 147.14351, y: 155.4}
+  m_AnchoredPosition: {x: 377.85876, y: -77.645}
+  m_SizeDelta: {x: 147.14351, y: 135.29}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &158048523
 MonoBehaviour:
@@ -2370,6 +2348,7 @@ GameObject:
   m_Component:
   - component: {fileID: 245371215}
   - component: {fileID: 245371216}
+  - component: {fileID: 245371217}
   m_Layer: 5
   m_Name: GameObject (2)
   m_TagString: Untagged
@@ -2423,6 +2402,28 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
+--- !u!114 &245371217
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 245371214}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b1a4fbf815277954cbc09a8235436574, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  TextBienvenido: {fileID: 1712851607}
+  txtEstado: {fileID: 0}
+  BtnCargarLibro: {fileID: 255386651}
+  BtnBiblioteca: {fileID: 1126805435}
+  BtnCerrarSesion: {fileID: 158048523}
+  switcher: {fileID: 649800822}
+  panelBiblioteca: {fileID: 0}
+  logoutUrl: https://login.nicolasirigoyen.com.ar/api/auth/logout/
+  refreshUrl: https://login.nicolasirigoyen.com.ar/api/auth/token/refresh/
+  verboseLogging: 1
 --- !u!4 &251875431 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 2201671572489931614, guid: a35b0267215e7e946a2a8f481f48fbbc,
@@ -2640,8 +2641,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 83.571754, y: -87.7}
-  m_SizeDelta: {x: 147.14351, y: 155.4}
+  m_AnchoredPosition: {x: 83.571754, y: -77.645}
+  m_SizeDelta: {x: 147.14351, y: 135.29}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &255386651
 MonoBehaviour:
@@ -5401,8 +5402,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 230.71526, y: -82.7}
-  m_SizeDelta: {x: 461.4305, y: 165.4}
+  m_AnchoredPosition: {x: 230.71526, y: -92.755}
+  m_SizeDelta: {x: 461.4305, y: 185.51}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &589619823
 MonoBehaviour:
@@ -7501,8 +7502,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 230.71526, y: -253.09999}
-  m_SizeDelta: {x: 461.4305, y: 175.4}
+  m_AnchoredPosition: {x: 230.71526, y: -263.155}
+  m_SizeDelta: {x: 461.4305, y: 155.29}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &771675150
 MonoBehaviour:
@@ -9793,8 +9794,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 230.71527, y: -87.7}
-  m_SizeDelta: {x: 147.14351, y: 155.4}
+  m_AnchoredPosition: {x: 230.71527, y: -77.645}
+  m_SizeDelta: {x: 147.14351, y: 135.29}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1126805435
 MonoBehaviour:
@@ -14277,7 +14278,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 
+  m_text: .
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -14311,8 +14312,8 @@ MonoBehaviour:
   m_fontSizeMin: 18
   m_fontSizeMax: 72
   m_fontStyle: 0
-  m_HorizontalAlignment: 1
-  m_VerticalAlignment: 256
+  m_HorizontalAlignment: 2
+  m_VerticalAlignment: 4096
   m_textAlignment: 65535
   m_characterSpacing: 0
   m_wordSpacing: 0
@@ -14370,8 +14371,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 230.71526, y: -82.7}
-  m_SizeDelta: {x: 441.4305, y: 145.4}
+  m_AnchoredPosition: {x: 230.71526, y: -92.755}
+  m_SizeDelta: {x: 441.4305, y: 165.51}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1717702162
 GameObject:
@@ -15719,6 +15720,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1964602099}
   - component: {fileID: 1964602098}
+  - component: {fileID: 1964602100}
   m_Layer: 5
   m_Name: GameObject (1)
   m_TagString: Untagged
@@ -15772,6 +15774,30 @@ RectTransform:
   m_AnchoredPosition: {x: 230.71526, y: -129.08755}
   m_SizeDelta: {x: 461.4305, y: 86.05837}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1964602100
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1964602097}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bcf8f1c41fdd6a947afb46ecdeaad570, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  InputFirstName: {fileID: 871263448}
+  InputLastName: {fileID: 1023946647}
+  InputUsername: {fileID: 77058050}
+  InputFechaNacimiento: {fileID: 252509238}
+  InputEmail: {fileID: 1375821376}
+  InputPassword: {fileID: 1480878546}
+  InputConfirmPassword: {fileID: 191935377}
+  BtnEnviarRegistro: {fileID: 1280707113}
+  txtEstado: {fileID: 0}
+  switcher: {fileID: 649800822}
+  loginRootFallback: {fileID: 773190229}
+  registerUrl: https://login.nicolasirigoyen.com.ar/api/auth/register/
 --- !u!1 &1972966831
 GameObject:
   m_ObjectHideFlags: 0
