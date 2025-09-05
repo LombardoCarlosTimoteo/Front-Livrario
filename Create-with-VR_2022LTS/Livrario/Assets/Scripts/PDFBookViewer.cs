@@ -98,9 +98,29 @@ public class PDFBookViewer : MonoBehaviour
 
     void ApplyTexture(Renderer r, Texture2D tex)
     {
-        if (!r) return;
-        var mat = r.sharedMaterial; // material URP/Unlit
-        if (mat) mat.mainTexture = tex;
+        if (!r || !tex) return;
+
+        // Ajustes de la textura (suavizado y evitar bleeding)
+        tex.wrapMode = TextureWrapMode.Clamp;
+        tex.filterMode = FilterMode.Bilinear;
+        tex.anisoLevel = 2;
+
+        // ⚠️ Usar material INSTANCIADO por renderer (NO sharedMaterial)
+        var mat = r.material;
+        if (mat != null)
+        {
+            // URP/Unlit usa _BaseMap, pero mainTexture también sirve
+            if (mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", tex);
+            mat.mainTexture = tex;
+
+            // Forzar Opaque (evita transparencias raras por ojo)
+            if (mat.HasFloat("_Surface")) mat.SetFloat("_Surface", 0f); // 0 = Opaque
+            if (mat.HasFloat("_AlphaClip")) mat.SetFloat("_AlphaClip", 0f);
+            if (mat.HasInt("_CullMode")) mat.SetInt("_CullMode", 0);   // 0=Front; 2=None (depende shader)
+                                                                       // Si tu shader expone "_Cull", podrías usar 2=None para ver ambas caras
+            if (mat.HasInt("_Cull")) mat.SetInt("_Cull", 2);       // Both (opcional)
+        }
+
         FitAspect(r.transform, tex);
     }
 

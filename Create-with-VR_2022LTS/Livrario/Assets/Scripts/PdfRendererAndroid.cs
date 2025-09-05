@@ -5,10 +5,11 @@ public static class PdfRendererAndroid
 {
 #if UNITY_ANDROID && !UNITY_EDITOR
     // Helpers estáticos para evitar lookups repetidos
-    static readonly AndroidJavaClass CLS_PFD = new AndroidJavaClass("android.os.ParcelFileDescriptor");
-    static readonly AndroidJavaClass CLS_BITMAP = new AndroidJavaClass("android.graphics.Bitmap");
+    static readonly AndroidJavaClass CLS_PFD     = new AndroidJavaClass("android.os.ParcelFileDescriptor");
+    static readonly AndroidJavaClass CLS_BITMAP  = new AndroidJavaClass("android.graphics.Bitmap");
     static readonly AndroidJavaClass CLS_BITMAP_CFG = new AndroidJavaClass("android.graphics.Bitmap$Config");
-    static readonly AndroidJavaClass CLS_CMPFMT = new AndroidJavaClass("android.graphics.Bitmap$CompressFormat");
+    static readonly AndroidJavaClass CLS_CMPFMT  = new AndroidJavaClass("android.graphics.Bitmap$CompressFormat");
+    static readonly AndroidJavaClass CLS_COLOR   = new AndroidJavaClass("android.graphics.Color");
 
     public static int GetPageCount(string filePath)
     {
@@ -26,9 +27,8 @@ public static class PdfRendererAndroid
         }
         finally
         {
-            // cerrar en orden inverso
             if (renderer != null) renderer.Call("close");
-            if (pfd != null) pfd.Call("close");
+            if (pfd != null)      pfd.Call("close");
         }
     }
 
@@ -60,31 +60,48 @@ public static class PdfRendererAndroid
                     bmp = CLS_BITMAP.CallStatic<AndroidJavaObject>("createBitmap", outW, outH, cfg);
                 }
 
-                // page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY (=1))
-                page.Call("render", bmp, null, null, 1);
+                // 🔑 FONDO BLANCO (evita "negro" en zonas transparentes del PDF)
+                using (var canvas = new AndroidJavaObject("android.graphics.Canvas", bmp))
+                {
+                    int WHITE = CLS_COLOR.GetStatic<int>("WHITE"); // 0xFFFFFFFF
+                    canvas.Call("drawColor", WHITE);
+                }
+
+                // Render de la página sobre ese fondo blanco
+                page.Call("render", bmp, null, null, 1); // RENDER_MODE_FOR_DISPLAY
 
                 // Pasamos Bitmap -> PNG bytes -> Texture2D
-                using (var baos = new AndroidJavaObject("java.io.ByteArrayOutputStream"))
-                {
-                    using (var PNG = CLS_CMPFMT.GetStatic<AndroidJavaObject>("PNG"))
-                    {
-                        bmp.Call<bool>("compress", PNG, 100, baos);
-                    }
+                // Pasamos Bitmap -> PNG bytes -> Texture2D
+using (var baos = new AndroidJavaObject("java.io.ByteArrayOutputStream"))
+{
+    using (var PNG = CLS_CMPFMT.GetStatic<AndroidJavaObject>("PNG"))
+    {
+        bmp.Call<bool>("compress", PNG, 100, baos);
+    }
 
-                    byte[] data = baos.Call<byte[]>("toByteArray");
-                    var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
-                    tex.LoadImage(data);
-                    tex.Apply();
-                    return tex;
-                }
+    byte[] data = baos.Call<byte[]>("toByteArray");
+
+    // ⚠️ Dejarla READABLE (false) y NO llamar a Apply() luego.
+    var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+    tex.LoadImage(data, /*markNonReadable:*/ false);
+
+    // Ajustes (no requieren Apply)
+    tex.wrapMode   = TextureWrapMode.Clamp;
+    tex.filterMode = FilterMode.Bilinear;
+    tex.anisoLevel = 2;
+
+    // No llames a tex.Apply() aquí (causa la excepción si no hay copia CPU)
+    return tex;
+}
+
             }
         }
         finally
         {
-            if (bmp != null) bmp.Call("recycle");
-            if (page != null) page.Call("close");
-            if (renderer != null) renderer.Call("close");
-            if (pfd != null) pfd.Call("close");
+            if (bmp != null)     bmp.Call("recycle");
+            if (page != null)    page.Call("close");
+            if (renderer != null)renderer.Call("close");
+            if (pfd != null)     pfd.Call("close");
         }
     }
 #else
