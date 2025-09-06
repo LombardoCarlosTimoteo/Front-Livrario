@@ -3556,9 +3556,9 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 274303675}
-        m_TargetAssemblyTypeName: GoPoliceSimple, Assembly-CSharp
-        m_MethodName: OnBtnPolicial
+      - m_Target: {fileID: 730769977}
+        m_TargetAssemblyTypeName: GoFantasySimple, Assembly-CSharp
+        m_MethodName: OnBtnFantasia
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -8682,6 +8682,8 @@ GameObject:
   - component: {fileID: 730769971}
   - component: {fileID: 730769974}
   - component: {fileID: 730769975}
+  - component: {fileID: 730769976}
+  - component: {fileID: 730769977}
   m_Layer: 0
   m_Name: GameObject
   m_TagString: Untagged
@@ -8747,6 +8749,30 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   menuPrincipal: {fileID: 245371214}
   goCargarLibro: {fileID: 201507081}
+--- !u!114 &730769976
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 730769970}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6787519faca1264409b4362b032d09e1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &730769977
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 730769970}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9cb69285789016244b0ee8ae21440aff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &768587365
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -11579,7 +11605,6 @@ GameObject:
   - component: {fileID: 1094490353}
   - component: {fileID: 1094490352}
   - component: {fileID: 1094490351}
-  - component: {fileID: 1094490350}
   m_Layer: 5
   m_Name: BtnSciFic
   m_TagString: Untagged
@@ -11607,18 +11632,6 @@ RectTransform:
   m_AnchoredPosition: {x: 342.76526, y: -48.480568}
   m_SizeDelta: {x: 224.1, y: 87.3}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &1094490350
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1094490348}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5869138befcfe5c47bba2199cef45383, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!114 &1094490351
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -11663,9 +11676,9 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1094490350}
-        m_TargetAssemblyTypeName: GoPoliceSimple, Assembly-CSharp
-        m_MethodName: OnBtnPolicial
+      - m_Target: {fileID: 730769976}
+        m_TargetAssemblyTypeName: GoSciFiSimple, Assembly-CSharp
+        m_MethodName: OnBtnCienciaFiccion
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
