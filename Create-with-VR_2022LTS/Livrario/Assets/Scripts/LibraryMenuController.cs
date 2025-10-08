@@ -6,7 +6,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
-
+using System.Collections.Generic; // arriba
 public class LibraryMenuController : MonoBehaviour
 {
     [Header("UI")]
@@ -26,17 +26,20 @@ public class LibraryMenuController : MonoBehaviour
 
     int selectedIndex = -1;
     GlobalBookStore.BookRecord[] data;
-
+    readonly List<BookItemUI> spawned = new List<BookItemUI>(); // (usa esta forma si tu C# no acepta 'new()')
     void Awake()
     {
         if (panelRoot) panelRoot.SetActive(false);
         if (btnVolver) btnVolver.onClick.AddListener(OnBtnVolver);
         if (btnContinuar) btnContinuar.onClick.AddListener(OnBtnContinuar);
+        if (btnEliminar) btnEliminar.onClick.AddListener(OnBtnEliminar);
+
     }
 
     // Llamá esto desde BtnBiblioteca → OnClick: LibraryMenuController.Open()
     public void Open()
     {
+        GlobalBookStore.I?.ReloadLibrary(); // ✅ trae lo último guardado
         if (backTargetToShow) backTargetToShow.SetActive(false);
         if (panelRoot) panelRoot.SetActive(true);
         RefreshList();
@@ -56,9 +59,9 @@ public class LibraryMenuController : MonoBehaviour
             return;
         }
 
-        // limpiar lista
         for (int i = listContent.childCount - 1; i >= 0; i--)
             Destroy(listContent.GetChild(i).gameObject);
+        spawned.Clear(); // ✅
 
         selectedIndex = -1;
         if (btnContinuar) btnContinuar.interactable = false;
@@ -66,12 +69,10 @@ public class LibraryMenuController : MonoBehaviour
         var lib = GlobalBookStore.I?.GetLibrary();
         int count = lib?.Count ?? 0;
         if (logVerbose) Debug.Log($"[Library] Total guardados: {count}");
-
         if (lib == null || lib.Count == 0) return;
 
         data = lib.ToArray();
 
-        int created = 0;
         for (int i = 0; i < data.Length; i++)
         {
             var rec = data[i];
@@ -79,25 +80,20 @@ public class LibraryMenuController : MonoBehaviour
             go.name = $"BookItem_{i}";
             go.SetActive(true);
 
-            // Si el prefab tiene BookItemUI, usalo
             var bi = go.GetComponent<BookItemUI>();
             if (bi)
             {
                 bi.normalColor = normalColor;
                 bi.selectedColor = selectedColor;
-                bi.Init(rec, this, i);   // <<--- IMPORTANTE: pasar "i"
+                bi.Init(rec, this, i);   // pasa índice
+                spawned.Add(bi);         // ✅ guardo para resaltar después
             }
             else
             {
-                // Fallback: niños "Title" y "Genre" + Button + Image opcional
                 var title = go.transform.Find("Title")?.GetComponent<TMP_Text>();
                 var genre = go.transform.Find("Genre")?.GetComponent<TMP_Text>();
                 var btn = go.GetComponent<Button>();
                 var img = go.GetComponent<Image>();
-
-                if (!title && logVerbose) Debug.LogWarning($"[Library] Prefab sin hijo 'Title' en {go.name}");
-                if (!genre && logVerbose) Debug.LogWarning($"[Library] Prefab sin hijo 'Genre' en {go.name}");
-                if (!btn && logVerbose) Debug.LogWarning($"[Library] Prefab sin Button en {go.name}");
 
                 if (title)
                     title.text = !string.IsNullOrEmpty(rec.title)
@@ -113,40 +109,46 @@ public class LibraryMenuController : MonoBehaviour
                 if (btn) btn.onClick.AddListener(() => OnSelect(idx));
                 if (img) img.color = normalColor;
             }
-
-            created++;
         }
 
-        if (logVerbose)
-        {
-            Debug.Log($"[Library] Instanciados {created} ítems. Hijos en Content: {listContent.childCount}");
-        }
-
-        // Forzar rebuild de layout para que aparezcan
         var rt = listContent as RectTransform;
         if (rt) LayoutRebuilder.ForceRebuildLayoutImmediate(rt);
     }
+
 
     // Selección desde el modo "sin BookItemUI"
     void OnSelect(int idx)
     {
         selectedIndex = idx;
-        // resaltar seleccionado
-        for (int i = 0; i < listContent.childCount; i++)
+
+        if (spawned.Count > 0)
         {
-            var img = listContent.GetChild(i).GetComponent<Image>();
-            if (img) img.color = (i == selectedIndex) ? selectedColor : normalColor;
+            for (int i = 0; i < spawned.Count; i++)
+                if (spawned[i]) spawned[i].SetSelected(i == selectedIndex); // ✅
         }
+        else
+        {
+            for (int i = 0; i < listContent.childCount; i++)
+            {
+                var img = listContent.GetChild(i).GetComponent<Image>();
+                if (img) img.color = (i == selectedIndex) ? selectedColor : normalColor;
+            }
+        }
+
         if (btnContinuar) btnContinuar.interactable = true;
     }
+
 
     // Selección llamada por BookItemUI
     public void OnItemSelected(BookItemUI item)
     {
         if (item == null || data == null) return;
+
         int idx = System.Array.FindIndex(data, d => d == item.Record);
+        if (idx < 0) idx = spawned.IndexOf(item); // fallback por posición
         if (idx >= 0) OnSelect(idx);
     }
+
 
     void OnBtnVolver() => Close();
 
@@ -155,15 +157,16 @@ public class LibraryMenuController : MonoBehaviour
         if (selectedIndex < 0 || data == null || selectedIndex >= data.Length) return;
         var rec = data[selectedIndex];
 
-        // volver “actual” el libro elegido
-        MakeRecordCurrent(rec);
+        // ✅ guardo globalmente el libro elegido
+        GlobalBookStore.I.SetCurrentFromRecord(rec);
 
-        // elegir escena por género (fallback a Policial)
+        // Elegí escena (fallback a Policial)
         string room = MapGenresToRoom(rec.genres);
         if (string.IsNullOrEmpty(room)) room = "Room_Policial";
 
         SceneManager.LoadScene(room);
     }
+
 
     // --- Helpers de género/escena ---
     static string FormatPrimaryGenre(string[] genres)
@@ -224,6 +227,18 @@ public class LibraryMenuController : MonoBehaviour
     {
         OnSelect(idx);
     }
+    public Button btnEliminar;
 
+    void OnBtnEliminar()
+    {
+        if (selectedIndex < 0 || data == null || selectedIndex >= data.Length) return;
+
+        var rec = data[selectedIndex];
+        GlobalBookStore.I.DeleteRecordAndFile(rec, true); // true = borrar archivo local también
+
+        selectedIndex = -1;
+        if (btnContinuar) btnContinuar.interactable = false;
+        RefreshList(); // repintar la librería
+    }
 
 }

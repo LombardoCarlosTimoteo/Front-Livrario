@@ -120,7 +120,8 @@ public class GlobalBookStore : MonoBehaviour
         originalPath = pickedPath;
         fileName = Path.GetFileName(pickedPath);
         if (string.IsNullOrEmpty(fileName)) fileName = "Libro.pdf";
-
+        title = Path.GetFileNameWithoutExtension(fileName);
+        author = "";
         // Si aún no tenemos título/autor (los puede definir el usuario y/o backend)
         if (string.IsNullOrEmpty(title)) title = Path.GetFileNameWithoutExtension(fileName);
         if (string.IsNullOrEmpty(author)) author = "";
@@ -134,6 +135,7 @@ public class GlobalBookStore : MonoBehaviour
                 string dir = Path.Combine(Application.persistentDataPath, "Books");
                 Directory.CreateDirectory(dir);
                 string dest = Path.Combine(dir, fileName);
+                dest = EnsureUniquePath(dest);     // <- NUEVO, evita overwrite
                 File.Copy(pickedPath, dest, true);
                 localPath = dest;
             }
@@ -153,6 +155,23 @@ public class GlobalBookStore : MonoBehaviour
         StartCoroutine(DebugLibraryFileNamesNextFrame());
         DebugLibraryJsonPathAndSize();
     }
+    static string EnsureUniquePath(string path)
+    {
+        if (!File.Exists(path)) return path;
+        string dir = Path.GetDirectoryName(path);
+        string baseName = Path.GetFileNameWithoutExtension(path);
+        string ext = Path.GetExtension(path);
+        int i = 1;
+        string candidate;
+        do
+        {
+            candidate = Path.Combine(dir, $"{baseName} ({i}){ext}");
+            i++;
+        } while (File.Exists(candidate) && i < 1000);
+        return candidate;
+    }
+    // Recarga la biblioteca desde disco (lo usa el menú)
+    public void ReloadLibrary() => LoadLibraryFromDisk();
 
     // El backend puede confirmar/ajustar título/autor/géneros
     public void UpdateWithServerResponse(string confirmedTitle, string confirmedAuthor, string[] confirmedGenres)
@@ -381,8 +400,29 @@ public class GlobalBookStore : MonoBehaviour
 
         if (persistAcrossLaunches)
             SaveToPrefs();
+
+        UpsertCurrentIntoLibrary();
     }
 
+    public void DeleteRecordAndFile(BookRecord rec, bool deleteFile = true)
+    {
+        if (rec == null) return;
+
+        // Si era el libro actual, limpiá estado
+        bool isCurrent = string.Equals(rec.localPath, localPath) || string.Equals(rec.originalPath, originalPath);
+        if (isCurrent) ClearCurrent();
+
+        // Borrar archivo local si corresponde
+        if (deleteFile && !string.IsNullOrEmpty(rec.localPath))
+        {
+            try { if (System.IO.File.Exists(rec.localPath)) System.IO.File.Delete(rec.localPath); }
+            catch (System.Exception e) { Debug.LogWarning("[BookStore] No se pudo borrar archivo: " + e.Message); }
+        }
+
+        // Quitar de la biblioteca y persistir
+        library.items.Remove(rec);
+        SaveLibraryToDisk();
+    }
 
 
 }
