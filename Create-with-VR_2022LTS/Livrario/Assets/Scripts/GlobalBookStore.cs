@@ -369,5 +369,20 @@ public class GlobalBookStore : MonoBehaviour
     }
 
 
+    public void SetCurrentFromRecord(BookRecord rec)
+    {
+        if (rec == null) return;
+        originalPath = rec.originalPath;
+        localPath = rec.localPath;
+        fileName = rec.fileName;
+        title = rec.title;
+        author = rec.author;
+        genres = rec.genres;
+
+        if (persistAcrossLaunches)
+            SaveToPrefs();
+    }
+
+
 
 }
