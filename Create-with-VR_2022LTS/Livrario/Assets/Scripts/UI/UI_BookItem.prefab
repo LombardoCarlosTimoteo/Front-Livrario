@@ -321,10 +321,10 @@ MonoBehaviour:
   genresText: {fileID: 5025606129608565406}
   selectButton: {fileID: 3285308965088981437}
   coverImage: {fileID: 2240849024027802122}
-  coverLongSide: 512
+  coverLongSide: 350
   background: {fileID: 2277449355657440146}
   normalColor: {r: 1, g: 1, b: 1, a: 1}
-  selectedColor: {r: 0.85, g: 0.92, b: 1, a: 1}
+  selectedColor: {r: 0, g: 1, b: 0.27972865, a: 1}
   progressButton: {fileID: 0}
   progressText: {fileID: 7754061806350104927}
 --- !u!114 &1047221432367078236
@@ -343,7 +343,7 @@ MonoBehaviour:
   m_MinWidth: -1
   m_MinHeight: -1
   m_PreferredWidth: -1
-  m_PreferredHeight: 260
+  m_PreferredHeight: 200
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
@@ -714,10 +714,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 9187646849535059244}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 75.27762, y: 0}
-  m_SizeDelta: {x: 124.857475, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 75.27762, y: -98.55837}
+  m_SizeDelta: {x: 0, y: 177.11674}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &6451591469105295741
 CanvasRenderer:

@@ -29,6 +29,7 @@ public class LibraryMenuController : MonoBehaviour
     readonly List<BookItemUI> spawned = new List<BookItemUI>(); // (usa esta forma si tu C# no acepta 'new()')
 
     bool _listeningProgress = false;
+    bool _listeningMetadata = false; // ← NUEVO
 
     void Awake()
     {
@@ -42,29 +43,81 @@ public class LibraryMenuController : MonoBehaviour
     // Llamá esto desde BtnBiblioteca → OnClick: LibraryMenuController.Open()
     public void Open()
     {
-        GlobalBookStore.I?.ReloadLibrary(); // ✅ trae lo último guardado
+        // Trae lo último del disco
+        GlobalBookStore.I?.ReloadLibrary();
+
+        // Suscripciones (una sola vez)
+        if (GlobalBookStore.I != null)
+        {
+            if (!_listeningMetadata)
+            {
+                GlobalBookStore.I.OnMetadataChanged += HandleMetadataChanged;
+                _listeningMetadata = true;
+            }
+            if (!_listeningProgress)
+            {
+                GlobalBookStore.I.OnProgressChanged += HandleProgressChanged;
+                _listeningProgress = true;
+            }
+        }
+
+        // UI
         if (backTargetToShow) backTargetToShow.SetActive(false);
         if (panelRoot) panelRoot.SetActive(true);
-        if (!_listeningProgress && GlobalBookStore.I != null)
-        {
-            GlobalBookStore.I.OnProgressChanged += HandleProgressChanged;
-            _listeningProgress = true;
-        }
+
+        // Reiniciar selección/estado del botón
+        selectedIndex = -1;
+        if (btnContinuar) btnContinuar.interactable = false;
 
         RefreshList();
     }
 
     public void Close()
     {
-        if (panelRoot) panelRoot.SetActive(false);
-        if (backTargetToShow) backTargetToShow.SetActive(true);
-        if (_listeningProgress && GlobalBookStore.I != null)
+        // Desuscribir eventos (simetría con Open)
+        if (GlobalBookStore.I != null)
         {
-            GlobalBookStore.I.OnProgressChanged -= HandleProgressChanged;
-            _listeningProgress = false;
+            if (_listeningMetadata)
+            {
+                GlobalBookStore.I.OnMetadataChanged -= HandleMetadataChanged;
+                _listeningMetadata = false;
+            }
+            if (_listeningProgress)
+            {
+                GlobalBookStore.I.OnProgressChanged -= HandleProgressChanged;
+                _listeningProgress = false;
+            }
         }
 
+        // UI
+        if (panelRoot) panelRoot.SetActive(false);
+        if (backTargetToShow) backTargetToShow.SetActive(true);
     }
+
+    void HandleMetadataChanged(GlobalBookStore.BookRecord rec)
+    {
+        // Si usamos BookItemUI: refrescar SOLO ese ítem
+        if (spawned != null && spawned.Count > 0)
+        {
+            for (int i = 0; i < spawned.Count; i++)
+            {
+                var it = spawned[i];
+                if (!it || it.Record == null) continue;
+
+                if (ReferenceEquals(it.Record, rec) || SameRecord(it.Record, rec))
+                {
+                    it.RefreshMetadataUI();
+                    return;
+                }
+            }
+        }
+
+        // Fallback: si no lo encontramos, repintar la lista
+        RefreshList();
+    }
+
+  
+
     void HandleProgressChanged(GlobalBookStore.BookRecord rec)
     {
         // Si tenemos items con BookItemUI, refrescamos SOLO el que cambió
@@ -177,13 +230,15 @@ public class LibraryMenuController : MonoBehaviour
     {
         selectedIndex = idx;
 
-        if (spawned.Count > 0)
+        // Resaltar con BookItemUI
+        if (spawned != null && spawned.Count > 0)
         {
             for (int i = 0; i < spawned.Count; i++)
-                if (spawned[i]) spawned[i].SetSelected(i == selectedIndex); // ✅
+                if (spawned[i]) spawned[i].SetSelected(i == selectedIndex);
         }
         else
         {
+            // Fallback: colorear Image del item
             for (int i = 0; i < listContent.childCount; i++)
             {
                 var img = listContent.GetChild(i).GetComponent<Image>();
@@ -191,8 +246,9 @@ public class LibraryMenuController : MonoBehaviour
             }
         }
 
-        if (btnContinuar) btnContinuar.interactable = true;
+        if (btnContinuar) btnContinuar.interactable = (selectedIndex >= 0);
     }
+
 
 
     // Selección llamada por BookItemUI
@@ -211,16 +267,27 @@ public class LibraryMenuController : MonoBehaviour
     void OnBtnContinuar()
     {
         if (selectedIndex < 0 || data == null || selectedIndex >= data.Length) return;
-        var rec = data[selectedIndex];
-        Debug.Log($"[UI] Continuar: '{rec.title}' lastPage={rec.lastPage} progress={rec.progress01:P0}");
 
-        // ✅ guardo globalmente el libro elegido
+        var rec = data[selectedIndex];
+
+        // Selecciono el libro actual SIN tocar progreso
         GlobalBookStore.I.SetCurrentFromRecord(rec);
 
-        // Elegí escena (fallback a Policial)
-        string room = MapGenresToRoom(rec.genres);
-        if (string.IsNullOrEmpty(room)) room = "Room_Policial";
+        // Aseguro tener la librería al día (por si otra escena la actualizó)
+        GlobalBookStore.I.ReloadLibrary();
 
+        // Si el registro en disco tiene géneros, usalos; si no, quedate sin géneros (irá al fallback)
+        var currentRec = GlobalBookStore.I.FindCurrentInLibrary() ?? rec;
+        string[] genres = (currentRec.genres != null && currentRec.genres.Length > 0)
+                            ? currentRec.genres
+                            : System.Array.Empty<string>();
+
+
+        // Elegir la escena por género
+        string room = MapGenresToRoom(genres);
+        if (string.IsNullOrEmpty(room)) room = "Room_Policial"; // fallback final
+
+        Debug.Log($"[Library] Continuar: '{currentRec.title}' genres=[{string.Join(",", genres ?? new string[0])}] -> {room}");
         SceneManager.LoadScene(room);
     }
 
@@ -243,15 +310,16 @@ public class LibraryMenuController : MonoBehaviour
             foreach (var g in genres)
             {
                 var s = Normalize(g);
-                if (s.Contains("fantasia")) return "Room_Fantasia2";
-                if (s.Contains("ciencia ficcion") || s.Contains("cienciaficcion") || s.Contains("science fiction") || s.Contains("scifi"))
-                    return "Room_cienciaFiccion";
-                if (s.Contains("policial") || s.Contains("thriller") || s.Contains("detectiv") || s.Contains("misterio"))
-                    return "Room_Policial";
+                if (s.Contains("fantasia") || s.Contains("fantasy")) return "Room_Fantasia2";
+                if (s.Contains("ciencia fic") || s.Contains("science fiction") || s.Contains("sci-fi") ||
+                    s.Contains("scifi") || s.Contains("sci fi")) return "Room_cienciaFiccion";
+                if (s.Contains("policial") || s.Contains("thriller") || s.Contains("detectiv") ||
+                    s.Contains("crime") || s.Contains("misterio") || s.Contains("mystery")) return "Room_Policial";
             }
         }
         return null;
     }
+
 
     static string Normalize(string input)
     {

@@ -54,6 +54,7 @@ public class GlobalBookStore : MonoBehaviour
             return lower.Contains("policia") || lower.Contains("policial");
         }
     }
+    public event Action<BookRecord> OnMetadataChanged; // ← NUEVO
 
     static bool IsPolicialStr(string s)
     {
@@ -200,17 +201,26 @@ public class GlobalBookStore : MonoBehaviour
     public void ReloadLibrary() => LoadLibraryFromDisk();
 
     // El backend puede confirmar/ajustar título/autor/géneros
-    public void UpdateWithServerResponse(string confirmedTitle, string confirmedAuthor, string[] confirmedGenres)
+    public void UpdateWithServerResponse(string newTitle, string newAuthor, string[] newGenres)
     {
-        if (!string.IsNullOrEmpty(confirmedTitle)) title = confirmedTitle;
-        if (!string.IsNullOrEmpty(confirmedAuthor)) author = confirmedAuthor;
-        genres = confirmedGenres;
+        if (!string.IsNullOrEmpty(newTitle)) title = newTitle;
+        if (!string.IsNullOrEmpty(newAuthor)) author = newAuthor;
+        if (newGenres != null && newGenres.Length > 0) genres = newGenres;
 
-        if (persistAcrossLaunches)
-            SaveToPrefs();
+        var rec = FindCurrentInLibrary();
+        if (rec != null)
+        {
+            if (!string.IsNullOrEmpty(newTitle)) rec.title = newTitle;
+            if (!string.IsNullOrEmpty(newAuthor)) rec.author = newAuthor;
+            if (newGenres != null && newGenres.Length > 0) rec.genres = newGenres;
 
-        UpsertCurrentIntoLibrary();
+            SaveLibraryToDisk();
+            OnMetadataChanged?.Invoke(rec); // ← AVISAR A LA UI
+        }
+
+        if (persistAcrossLaunches) SaveToPrefs();
     }
+
 
     // Ruta preferida para usar dentro de la app
     public string GetBestPath()
