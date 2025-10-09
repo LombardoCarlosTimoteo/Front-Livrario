@@ -5,23 +5,26 @@ using System.Text;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
-using TMPro;            // si usás TextMeshPro
-using UnityEngine.UI;  // si usás UI legacy
+using TMPro;            // TextMeshPro
+using UnityEngine.UI;  // UI legacy
 
 public class IniciarLecturaController : MonoBehaviour
 {
-    [Header("Endpoint (NO usar localhost en Quest)")]
-    [Tooltip("Ej: http://192.168.0.12:8080")]
-    public string baseUrl = "http://192.168.0.12:8080";
+    [Header("Endpoint (usar HTTPS del ingest)")]
+    public string baseUrl = "https://ingest.nicolasirigoyen.com.ar";
     public string ensurePath = "/book/ensure";
     [Tooltip("Timeout de la request en segundos")]
-    public int timeoutSeconds = 15;
+    public int timeoutSeconds = 30;
 
-    [Header("UI Inputs (asigná los que uses)")]
-    public TMP_InputField InputTituloLibroTMP;  // opcional (TMP)
-    public TMP_InputField InputAutorTMP;        // opcional (TMP)
-    public InputField InputTituloLibro;     // opcional (UI legacy)
-    public InputField InputAutor;           // opcional (UI legacy)
+    [Header("UI Inputs (opcionales)")]
+    public TMP_InputField InputTituloLibroTMP;
+    public TMP_InputField InputAutorTMP;
+    public InputField InputTituloLibro;
+    public InputField InputAutor;
+
+    [Header("Salida (opcional)")]
+    [Tooltip("Si lo asignás, muestra el JSON crudo y el resumen en pantalla.")]
+    public TMP_Text responseText;
 
     [Header("Fallbacks si inputs vacíos")]
     public string fallbackTitle = "Libro";
@@ -31,7 +34,7 @@ public class IniciarLecturaController : MonoBehaviour
     public string escenaPolicial = "Room_Policial";      // fallback por error
     public string escenaCienciaFiccion = "Room_cienciaFiccion";
     public string escenaFantasia = "Room_Fantasia2";
-    public string escenaDefault = "Room_Policial";           // cuando HAY respuesta pero sin géneros soportados
+    public string escenaDefault = "Room_Policial";       // si hay respuesta pero sin géneros soportados
 
     [System.Serializable]
     public class BookEnsureResponse
@@ -53,21 +56,20 @@ public class IniciarLecturaController : MonoBehaviour
         // 0) Validaciones y datos base
         if (GlobalBookStore.I == null)
         {
-            Debug.LogWarning("[BtnIniciarLectura] GlobalBookStore no está en la escena. Fallback a Policial.");
+            LogToUI("[BtnIniciarLectura] GlobalBookStore no está en la escena. Fallback a Policial.");
             LoadPoliceFallback();
             yield break;
         }
 
         string pdfPath = GlobalBookStore.I.GetBestPath();
-        if (string.IsNullOrEmpty(pdfPath) || !File.Exists(pdfPath))
+        if (string.IsNullOrEmpty(pdfPath))
         {
-            Debug.LogWarning("[BtnIniciarLectura] No hay PDF válido. Fallback a Policial.");
+            LogToUI("[BtnIniciarLectura] No hay PDF. Fallback a Policial.");
             LoadPoliceFallback();
             yield break;
         }
 
-        // 1) Título/Autor desde UI (con fallback) y guardarlos YA en el store,
-        //    así quedan persistidos aunque la request falle.
+        // 1) Título/Autor desde UI (con fallback) y guardarlos YA en el store
         string title = ReadInputSafely(InputTituloLibroTMP, InputTituloLibro);
         if (string.IsNullOrWhiteSpace(title))
         {
@@ -75,54 +77,63 @@ public class IniciarLecturaController : MonoBehaviour
                         ? Path.GetFileNameWithoutExtension(GlobalBookStore.I.FileName)
                         : fallbackTitle;
         }
-
         string author = ReadInputSafely(InputAutorTMP, InputAutor);
         if (string.IsNullOrWhiteSpace(author)) author = fallbackAuthor;
 
-        // persistir en el store (sin géneros, aún)
         GlobalBookStore.I.UpdateWithServerResponse(title, author, null);
 
         // 2) Preparar POST multipart
         string url = baseUrl.TrimEnd('/') + ensurePath;
-        byte[] pdfBytes = null;
+        byte[] pdfBytes = TryReadPdfBytes(pdfPath); // maneja errores y content:// si es posible
 
-        try { pdfBytes = File.ReadAllBytes(pdfPath); }
-        catch (System.Exception e)
-        {
-            Debug.LogWarning("[BtnIniciarLectura] No se pudo leer el PDF, continuo igual. " + e.Message);
-        }
-
-        WWWForm form = new WWWForm();
+        var form = new WWWForm();
         form.AddField("title", title);
         form.AddField("author", author);
         if (pdfBytes != null)
         {
             form.AddBinaryData("pdf", pdfBytes, Path.GetFileName(pdfPath), "application/pdf");
         }
+        else
+        {
+            LogToUI($"[BtnIniciarLectura] Advertencia: no pude leer bytes del PDF en '{pdfPath}'. Envío sin archivo.");
+        }
 
         using (var req = UnityWebRequest.Post(url, form))
         {
             req.timeout = Mathf.Max(5, timeoutSeconds);
             req.SetRequestHeader("Accept", "application/json");
+            req.downloadHandler = new DownloadHandlerBuffer();
             Debug.Log($"[BtnIniciarLectura] POST {url}  file={pdfPath}  title='{title}' author='{author}'");
 
             yield return req.SendWebRequest();
 
+            string body = req.downloadHandler != null ? req.downloadHandler.text : "";
+            int code = (int)req.responseCode;
+
+            // --- IMPRIMIR SIEMPRE LO QUE RESPONDE ---
+            Debug.Log($"[Ingest] HTTP {code}\n{body}");
+            LogToUI($"HTTP {code}\n{Pretty(body)}");
+            var headers = req.GetResponseHeaders();
+            string headersStr = HeadersToString(headers);
+            // 1) Un log de una sola línea (útil en logcat)
+            Debug.Log($"[Ingest] HTTP {code} | {TrimForLog(OneLine(body), 2000)}");
+
+            // 2) Un log multilínea con headers + cuerpo (útil en Editor)
+            Debug.Log($"[Ingest] HTTP {code}\n{headersStr}\n{body}");
+
+            // 3) (opcional) mostrar en pantalla si asignaste responseText en el Inspector
+            LogToUI($"HTTP {code}\n{headersStr}\n{Pretty(body)}");
             // 3) FALLBACK si error/timeout
-            if (req.result != UnityWebRequest.Result.Success || req.responseCode < 200 || req.responseCode >= 300)
+            if (req.result != UnityWebRequest.Result.Success || code < 200 || code >= 300)
             {
-                Debug.LogWarning($"[BtnIniciarLectura] Error HTTP o timeout. code={req.responseCode} err='{req.error}'. Fallback a Policial.");
+                Debug.LogWarning($"[BtnIniciarLectura] Error HTTP/timeout. code={code} err='{req.error}'. Fallback a Policial.");
                 LoadPoliceFallback();
                 yield break;
             }
 
-            // 4) Parsear JSON
-            string json = req.downloadHandler.text;
+            // 4) Parsear JSON (si se puede)
             BookEnsureResponse resp = null;
-            try
-            {
-                resp = JsonUtility.FromJson<BookEnsureResponse>(json);
-            }
+            try { resp = JsonUtility.FromJson<BookEnsureResponse>(body); }
             catch (System.Exception e)
             {
                 Debug.LogWarning("[BtnIniciarLectura] JSON inválido. " + e.Message + " Fallback a Policial.");
@@ -133,8 +144,7 @@ public class IniciarLecturaController : MonoBehaviour
             // 5) Actualizar store con géneros confirmados (si los hay)
             GlobalBookStore.I.UpdateWithServerResponse(resp?.title, resp?.author, resp?.genres);
 
-            // 6) Elegir escena por PRIMERA coincidencia soportada. 
-            //    Si NO hay coincidencia pero hubo respuesta válida → escenaDefault.
+            // 6) Elegir escena por PRIMERA coincidencia soportada
             string scene = EscenaPorPrimerGeneroSoportado(resp?.genres);
             if (string.IsNullOrEmpty(scene)) scene = escenaDefault;
 
@@ -142,12 +152,21 @@ public class IniciarLecturaController : MonoBehaviour
             SceneManager.LoadScene(scene);
         }
     }
+    static string OneLine(string s) => string.IsNullOrEmpty(s) ? "" : s.Replace("\r", "").Replace("\n", " ");
+    static string TrimForLog(string s, int max) => (s != null && s.Length > max) ? s.Substring(0, max) + " ...[trimmed]" : (s ?? "");
 
-    // --- Fallback sólido: carga Policial siempre ---
+    static string HeadersToString(System.Collections.Generic.Dictionary<string, string> dict)
+    {
+        if (dict == null || dict.Count == 0) return "(sin headers)";
+        var sb = new StringBuilder();
+        foreach (var kv in dict) sb.AppendLine($"{kv.Key}: {kv.Value}");
+        return sb.ToString();
+    }
+
+
+    // --- Fallback sólido ---
     void LoadPoliceFallback()
     {
-        // No tocamos géneros para no sobreescribir lo que ya tenga el store
-        // (el PDF ya quedó guardado por el Picker, y título/autor se guardaron antes).
         SceneManager.LoadScene(escenaPolicial);
     }
 
@@ -166,20 +185,15 @@ public class IniciarLecturaController : MonoBehaviour
     }
 
     // --- Matchers tolerantes ---
-    static bool EsPolicial(string s)
-    {
-        return s.Contains("policial") || s.Contains("thriller") || s.Contains("detectiv") ||
-               s.Contains("crime") || s.Contains("misterio") || s.Contains("mystery");
-    }
-    static bool EsCienciaFiccion(string s)
-    {
-        return s.Contains("ciencia fic") || s.Contains("science fiction") || s.Contains("sci-fi") ||
-               s.Contains("scifi") || s.Contains("sci fi");
-    }
-    static bool EsFantasia(string s)
-    {
-        return s.Contains("fantas"); // cubre "fantasía" y "fantasy"
-    }
+    static bool EsPolicial(string s) =>
+        s.Contains("policial") || s.Contains("thriller") || s.Contains("detectiv") ||
+        s.Contains("crime") || s.Contains("misterio") || s.Contains("mystery");
+
+    static bool EsCienciaFiccion(string s) =>
+        s.Contains("ciencia fic") || s.Contains("science fiction") || s.Contains("sci-fi") ||
+        s.Contains("scifi") || s.Contains("sci fi");
+
+    static bool EsFantasia(string s) => s.Contains("fantas");
 
     // Lee de TMP o de UI legacy
     static string ReadInputSafely(TMP_InputField tmp, InputField legacy)
@@ -201,5 +215,98 @@ public class IniciarLecturaController : MonoBehaviour
             if (cat != UnicodeCategory.NonSpacingMark) sb.Append(c);
         }
         return sb.ToString().Normalize(NormalizationForm.FormC);
+    }
+
+    // --- Utilidades ---
+    void LogToUI(string msg)
+    {
+        Debug.Log(msg);
+        if (responseText != null) responseText.text = msg;
+    }
+
+    static string Pretty(string json)
+    {
+        if (string.IsNullOrEmpty(json)) return "";
+        var sb = new StringBuilder(json.Length + 128);
+        int indent = 0; bool quoted = false; char last = '\0';
+        for (int i = 0; i < json.Length; i++)
+        {
+            char c = json[i];
+
+            if (c == '"' && last != '\\') quoted = !quoted;
+
+            if (!quoted)
+            {
+                if (c == '{' || c == '[')
+                {
+                    sb.Append(c).Append('\n');
+                    indent++;
+                    sb.Append(' ', indent * 2);
+                    last = c; continue;
+                }
+                if (c == '}' || c == ']')
+                {
+                    sb.Append('\n');
+                    indent = Mathf.Max(0, indent - 1);
+                    sb.Append(' ', indent * 2).Append(c);
+                    last = c; continue;
+                }
+                if (c == ',')
+                {
+                    sb.Append(c).Append('\n').Append(' ', indent * 2);
+                    last = c; continue;
+                }
+                if (c == ':')
+                {
+                    sb.Append(": ");
+                    last = c; continue;
+                }
+            }
+            sb.Append(c);
+            last = c;
+        }
+        return sb.ToString();
+    }
+
+    static byte[] TryReadPdfBytes(string path)
+    {
+        if (string.IsNullOrEmpty(path)) return null;
+
+        // Si es ruta de archivo, intentá File.ReadAllBytes
+        if (!path.StartsWith("content://"))
+        {
+            try { return File.ReadAllBytes(path); } catch { return null; }
+        }
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+        // content:// en Android (si no tenés copia local)
+        try
+        {
+            using (var unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
+            using (var activity    = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
+            using (var resolver    = activity.Call<AndroidJavaObject>("getContentResolver"))
+            using (var uriCls      = new AndroidJavaClass("android.net.Uri"))
+            using (var uri         = uriCls.CallStatic<AndroidJavaObject>("parse", path))
+            using (var stream      = resolver.Call<AndroidJavaObject>("openInputStream", uri))
+            {
+                if (stream == null) return null;
+                // Leer a un MemoryStream .NET
+                using (var ms = new MemoryStream())
+                {
+                    byte[] buffer = new byte[16 * 1024];
+                    while (true)
+                    {
+                        int read = stream.Call<int>("read", buffer, 0, buffer.Length);
+                        if (read <= 0) break;
+                        ms.Write(buffer, 0, read);
+                    }
+                    return ms.ToArray();
+                }
+            }
+        }
+        catch { return null; }
+#else
+        return null;
+#endif
     }
 }
