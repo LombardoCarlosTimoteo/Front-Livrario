@@ -9686,12 +9686,13 @@ MonoBehaviour:
   InputAutorTMP: {fileID: 1305493030}
   InputTituloLibro: {fileID: 0}
   InputAutor: {fileID: 0}
+  responseText: {fileID: 0}
   fallbackTitle: Libro
   fallbackAuthor: 
   escenaPolicial: Room_Policial
   escenaCienciaFiccion: Room_cienciaFiccion
   escenaFantasia: Room_Fantasia2
-  escenaDefault: Room_Policial
+  escenaDefault: Room_cienciaFiccion
 --- !u!1 &730885720
 GameObject:
   m_ObjectHideFlags: 0

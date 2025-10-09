@@ -34,7 +34,7 @@ public class IniciarLecturaController : MonoBehaviour
     public string escenaPolicial = "Room_Policial";      // fallback por error
     public string escenaCienciaFiccion = "Room_cienciaFiccion";
     public string escenaFantasia = "Room_Fantasia2";
-    public string escenaDefault = "Room_Policial";       // si hay respuesta pero sin géneros soportados
+    public string escenaDefault = "Room_cienciaFiccion";       // si hay respuesta pero sin géneros soportados
 
     [System.Serializable]
     public class BookEnsureResponse
