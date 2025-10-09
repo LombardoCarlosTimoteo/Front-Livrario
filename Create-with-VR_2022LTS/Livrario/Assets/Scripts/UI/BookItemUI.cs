@@ -19,6 +19,10 @@ public class BookItemUI : MonoBehaviour
     public Color normalColor = Color.white;
     public Color selectedColor = new Color(0.85f, 0.92f, 1f);
 
+    [Header("Progreso")]
+    public Button progressButton;             // ← arrastrá el botón del %
+    public TextMeshProUGUI progressText;      // ← arrastrá el TMP del % (hijo del botón)
+
     // Datos
     public GlobalBookStore.BookRecord Record { get; private set; }
 
@@ -50,12 +54,30 @@ public class BookItemUI : MonoBehaviour
 
         // Lanza carga de carátula
         LoadCoverAsync();
+        RefreshProgressUI();
+
     }
 
     public void SetSelected(bool selected)
     {
         if (background)
             background.color = selected ? selectedColor : normalColor;
+    }
+    public void RefreshProgressUI()
+    {
+        if (Record == null) return;
+
+        int percent = Mathf.RoundToInt(Mathf.Clamp01(Record.progress01) * 100f);
+
+        if (progressText) progressText.text = percent + "%";
+        if (progressButton)
+        {
+            // Si querés ocultar cuando es 0% cambiá a: percent > 0
+            progressButton.gameObject.SetActive(true);
+            // El botón también selecciona este ítem:
+            progressButton.onClick.RemoveAllListeners();
+            progressButton.onClick.AddListener(OnClick);
+        }
     }
 
     void OnClick()
@@ -94,7 +116,9 @@ public class BookItemUI : MonoBehaviour
     void OnDestroy()
     {
         if (selectButton) selectButton.onClick.RemoveListener(OnClick);
+        if (progressButton) progressButton.onClick.RemoveListener(OnClick);
         if (_thumbSprite) Destroy(_thumbSprite);
         if (_thumbTex) Destroy(_thumbTex);
     }
+
 }

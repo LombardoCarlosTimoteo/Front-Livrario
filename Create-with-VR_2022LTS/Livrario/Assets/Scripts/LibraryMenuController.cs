@@ -27,6 +27,9 @@ public class LibraryMenuController : MonoBehaviour
     int selectedIndex = -1;
     GlobalBookStore.BookRecord[] data;
     readonly List<BookItemUI> spawned = new List<BookItemUI>(); // (usa esta forma si tu C# no acepta 'new()')
+
+    bool _listeningProgress = false;
+
     void Awake()
     {
         if (panelRoot) panelRoot.SetActive(false);
@@ -42,6 +45,12 @@ public class LibraryMenuController : MonoBehaviour
         GlobalBookStore.I?.ReloadLibrary(); // ✅ trae lo último guardado
         if (backTargetToShow) backTargetToShow.SetActive(false);
         if (panelRoot) panelRoot.SetActive(true);
+        if (!_listeningProgress && GlobalBookStore.I != null)
+        {
+            GlobalBookStore.I.OnProgressChanged += HandleProgressChanged;
+            _listeningProgress = true;
+        }
+
         RefreshList();
     }
 
@@ -49,6 +58,44 @@ public class LibraryMenuController : MonoBehaviour
     {
         if (panelRoot) panelRoot.SetActive(false);
         if (backTargetToShow) backTargetToShow.SetActive(true);
+        if (_listeningProgress && GlobalBookStore.I != null)
+        {
+            GlobalBookStore.I.OnProgressChanged -= HandleProgressChanged;
+            _listeningProgress = false;
+        }
+
+    }
+    void HandleProgressChanged(GlobalBookStore.BookRecord rec)
+    {
+        // Si tenemos items con BookItemUI, refrescamos SOLO el que cambió
+        if (spawned != null && spawned.Count > 0)
+        {
+            for (int i = 0; i < spawned.Count; i++)
+            {
+                var it = spawned[i];
+                if (!it || it.Record == null) continue;
+
+                // Coincidencia por referencia o por path (por si se recarga la lib)
+                if (ReferenceEquals(it.Record, rec) || SameRecord(it.Record, rec))
+                {
+                    // Actualizo la data y el UI del % sin reinstanciar
+                    it.RefreshProgressUI();
+                    return;
+                }
+            }
+        }
+
+        // Fallback: si no lo encontramos, repintar toda la lista
+        RefreshList();
+    }
+
+    // Compara por rutas (local u original) para robustez
+    static bool SameRecord(GlobalBookStore.BookRecord a, GlobalBookStore.BookRecord b)
+    {
+        if (a == null || b == null) return false;
+        if (!string.IsNullOrEmpty(a.localPath) && a.localPath == b.localPath) return true;
+        if (!string.IsNullOrEmpty(a.originalPath) && a.originalPath == b.originalPath) return true;
+        return false;
     }
 
     void RefreshList()
@@ -105,6 +152,15 @@ public class LibraryMenuController : MonoBehaviour
                 if (genre)
                     genre.text = FormatPrimaryGenre(rec.genres);
 
+                // --- NUEVO: progreso ---
+                var progress = go.transform.Find("Panel/Progress")?.GetComponent<TMP_Text>();
+                if (progress)
+                {
+                    int percent = Mathf.RoundToInt(Mathf.Clamp01(rec.progress01) * 100f);
+                    progress.gameObject.SetActive(percent > 0);
+                    progress.text = percent + "%";
+                }
+
                 int idx = i;
                 if (btn) btn.onClick.AddListener(() => OnSelect(idx));
                 if (img) img.color = normalColor;
@@ -156,6 +212,7 @@ public class LibraryMenuController : MonoBehaviour
     {
         if (selectedIndex < 0 || data == null || selectedIndex >= data.Length) return;
         var rec = data[selectedIndex];
+        Debug.Log($"[UI] Continuar: '{rec.title}' lastPage={rec.lastPage} progress={rec.progress01:P0}");
 
         // ✅ guardo globalmente el libro elegido
         GlobalBookStore.I.SetCurrentFromRecord(rec);
@@ -212,16 +269,10 @@ public class LibraryMenuController : MonoBehaviour
     void MakeRecordCurrent(GlobalBookStore.BookRecord rec)
     {
         if (rec == null || GlobalBookStore.I == null) return;
-
-        string best = !string.IsNullOrEmpty(rec.localPath) && File.Exists(rec.localPath)
-                        ? rec.localPath
-                        : rec.originalPath;
-
-        if (!string.IsNullOrEmpty(best))
-            GlobalBookStore.I.SetFromPickerPath(best);
-
+        GlobalBookStore.I.SetCurrentFromRecord(rec); // ✅ no resetea progreso
         GlobalBookStore.I.UpdateWithServerResponse(rec.title, rec.author, rec.genres);
     }
+
 
     public void OnItemSelectedIndex(int idx)
     {

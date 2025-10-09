@@ -20,7 +20,14 @@ public class PDFBookViewer : MonoBehaviour
     readonly List<int> lruOrder = new();
 
     void OnEnable()  { OpenFromGlobal(); }
-    void OnDisable() { ClearPage(leftPage); ClearPage(rightPage); }
+    void OnDisable()
+    {
+        GlobalBookStore.I?.UpdateProgress(leftIndex, pageCount);
+        ClearCache(); // <- NUEVO
+        ClearPage(leftPage);
+        ClearPage(rightPage);
+    }
+
 
     // Por si querés poner un botón "Recargar"
     public void ReloadFromGlobal() => OpenFromGlobal();
@@ -44,10 +51,50 @@ public class PDFBookViewer : MonoBehaviour
 #if UNITY_ANDROID && !UNITY_EDITOR
         try
         {
+                GlobalBookStore.I.ReloadLibrary();  // ← asegura tener library.json en esta escena
             pageCount = Mathf.Max(0, PdfRendererAndroid.GetPageCount(path));
-            leftIndex = 0;
-            Debug.Log($"[PDFBookViewer] Abierto: '{path}'  pages={pageCount}");
-            RefreshSpread();
+
+// Asegurá que el store conozca el total (por si no estaba)
+GlobalBookStore.I.EnsurePageCount(pageCount);
+
+// Buscar el registro actual para leer lastPage
+int start = 0;
+var rec = GlobalBookStore.I.FindCurrentInLibrary();   // <- si ya agregaste este helper
+
+// Fallback por si no tenés FindCurrentInLibrary(): buscá por path
+if (rec == null)
+{
+    var lib = GlobalBookStore.I.GetLibrary();
+    if (lib != null)
+    {
+        foreach (var r in lib)
+        {
+            if ((!string.IsNullOrEmpty(r.localPath)    && r.localPath    == path) ||
+                (!string.IsNullOrEmpty(r.originalPath) && r.originalPath == path))
+            { rec = r; break; }
+        }
+    }
+}
+
+// Clampeá y alineá a izquierda (0,2,4,...) para doble página
+if (rec != null && rec.lastPage >= 0 && rec.lastPage < pageCount)
+    start = rec.lastPage;
+
+leftIndex = start - (start % 2);
+
+Debug.Log($"[PDFBookViewer] Abierto: '{path}' pages={pageCount} lastPage={start} leftIndex={leftIndex}");
+if (rec != null)
+    Debug.Log($"[PDFBookViewer] Usando record: title='{rec.title}' lastPage={rec.lastPage} pageCount(rec)={rec.pageCount} progress={rec.progress01:P0}");
+else
+    Debug.LogWarning("[PDFBookViewer] No encontré record en library para este path (abriré en 0).");
+
+RefreshSpread();
+
+// Guardá inmediatamente (por si el usuario sale sin avanzar)
+GlobalBookStore.I.UpdateProgress(leftIndex, pageCount);
+
+
+
         }
         catch (System.Exception e)
         {
@@ -59,6 +106,7 @@ public class PDFBookViewer : MonoBehaviour
         ApplyTexture(leftPage,  Texture2D.whiteTexture);
         ApplyTexture(rightPage, Texture2D.whiteTexture);
 #endif
+
     }
 
     public void NextSpread()
@@ -66,20 +114,22 @@ public class PDFBookViewer : MonoBehaviour
         if (pageCount <= 0) return;
         int maxLeft = (pageCount % 2 == 0) ? pageCount - 2 : pageCount - 1;
         leftIndex = Mathf.Min(leftIndex + 2, maxLeft);
-        RefreshSpread();
+        RefreshSpread(); // guarda adentro
     }
 
     public void PrevSpread()
     {
         if (pageCount <= 0) return;
         leftIndex = Mathf.Max(0, leftIndex - 2);
-        RefreshSpread();
+        RefreshSpread(); // guarda adentro
     }
+
 
     void RefreshSpread()
     {
         SetPage(leftPage, leftIndex);
         SetPage(rightPage, leftIndex + 1);
+        GlobalBookStore.I?.UpdateProgress(leftIndex, pageCount);
     }
 
     void SetPage(Renderer r, int page)
@@ -152,4 +202,13 @@ public class PDFBookViewer : MonoBehaviour
         }
         return tex;
     }
+
+    void ClearCache()
+    {
+        foreach (var kv in cache)
+            if (kv.Value) Destroy(kv.Value);
+        cache.Clear();
+        lruOrder.Clear();
+    }
+
 }

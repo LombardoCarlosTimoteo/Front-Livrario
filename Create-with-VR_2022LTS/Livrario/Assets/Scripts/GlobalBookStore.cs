@@ -1,22 +1,28 @@
+Ôªø
+
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using System.Globalization; // <-- aÒadido para normalizaciÛn
+using System.Globalization; // <-- a√±adido para normalizaci√≥n
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 public class GlobalBookStore : MonoBehaviour
 {
+
+
+    public event Action<BookRecord> OnProgressChanged; // se dispara cuando cambia el progreso
+
     public static GlobalBookStore I { get; private set; }
 
     [Header("Estado del libro actual")]
     [SerializeField] string originalPath;     // path que entrega el picker (puede ser content://)
     [SerializeField] string localPath;        // copia en almacenamiento de la app
     [SerializeField] string fileName;         // nombre visible
-    [SerializeField] string title;            // tÌtulo (puede venir del input / backend)
+    [SerializeField] string title;            // t√≠tulo (puede venir del input / backend)
     [SerializeField] string author;           // autor (input / backend)
-    [SerializeField] string[] genres;         // gÈneros (del backend)
+    [SerializeField] string[] genres;         // g√©neros (del backend)
 
     [Header("Opciones")]
     public bool copyToAppStorage = true;
@@ -31,7 +37,7 @@ public class GlobalBookStore : MonoBehaviour
     public bool HasBook => !string.IsNullOrEmpty(GetBestPath());
 
     // ==== Compatibilidad con scripts viejos ====
-    // Calcula "policial" a partir de genres (si hay) o por heurÌstica del nombre de archivo.
+    // Calcula "policial" a partir de genres (si hay) o por heur√≠stica del nombre de archivo.
     public bool IsPolicial
     {
         get
@@ -56,7 +62,7 @@ public class GlobalBookStore : MonoBehaviour
                s.Contains("misterio") || s.Contains("mystery");
     }
 
-    // Normaliza a min˙sculas y sin tildes (para comparar gÈneros robustamente)
+    // Normaliza a min√∫sculas y sin tildes (para comparar g√©neros robustamente)
     static string Normalize(string input)
     {
         if (string.IsNullOrEmpty(input)) return "";
@@ -81,6 +87,10 @@ public class GlobalBookStore : MonoBehaviour
         public string localPath;
         public string fileName;
         public string addedAtIso;
+        // NUEVO
+        public int lastPage = 0;      // √≠ndice 0-based
+        public int pageCount = 0;     // total de p√°ginas
+        public float progress01 = 0f; // 0..1
     }
     [Serializable] class BookLibrary { public List<BookRecord> items = new List<BookRecord>(); }
 
@@ -111,7 +121,7 @@ public class GlobalBookStore : MonoBehaviour
             LoadFromPrefs();
     }
 
-    // ====== Picker: setea el libro actual (se llama cuando elegÌs un PDF) ======
+    // ====== Picker: setea el libro actual (se llama cuando eleg√≠s un PDF) ======
     public void SetFromPickerPath(string pickedPath)
     {
         if (string.IsNullOrEmpty(pickedPath))
@@ -122,7 +132,7 @@ public class GlobalBookStore : MonoBehaviour
         if (string.IsNullOrEmpty(fileName)) fileName = "Libro.pdf";
         title = Path.GetFileNameWithoutExtension(fileName);
         author = "";
-        // Si a˙n no tenemos tÌtulo/autor (los puede definir el usuario y/o backend)
+        // Si a√∫n no tenemos t√≠tulo/autor (los puede definir el usuario y/o backend)
         if (string.IsNullOrEmpty(title)) title = Path.GetFileNameWithoutExtension(fileName);
         if (string.IsNullOrEmpty(author)) author = "";
 
@@ -150,6 +160,22 @@ public class GlobalBookStore : MonoBehaviour
 
         // Guardar/actualizar en Biblioteca
         UpsertCurrentIntoLibrary();
+        // --- Seguro: calcular pageCount sin pisar progreso existente ---
+        string bestPath = GetBestPath();
+        int pc = 0;
+        try { pc = PdfRendererAndroid.GetPageCount(bestPath); } catch { pc = 0; }
+
+        var rec = FindCurrentInLibrary();
+        if (rec != null)
+        {
+            if (rec.pageCount == 0 && pc > 0) rec.pageCount = pc; // solo si no estaba
+                                                                  // NO tocar lastPage si ya existe; recalcular progress solo si tiene datos
+            if (rec.pageCount > 0)
+                rec.progress01 = (rec.lastPage + 1f) / rec.pageCount;
+
+            SaveLibraryToDisk();
+        }
+
 
         Debug.Log($"[GlobalBookStore] Libro listo. local='{localPath}' original='{originalPath}' title='{title}' author='{author}'");
         StartCoroutine(DebugLibraryFileNamesNextFrame());
@@ -170,10 +196,10 @@ public class GlobalBookStore : MonoBehaviour
         } while (File.Exists(candidate) && i < 1000);
         return candidate;
     }
-    // Recarga la biblioteca desde disco (lo usa el men˙)
+    // Recarga la biblioteca desde disco (lo usa el men√∫)
     public void ReloadLibrary() => LoadLibraryFromDisk();
 
-    // El backend puede confirmar/ajustar tÌtulo/autor/gÈneros
+    // El backend puede confirmar/ajustar t√≠tulo/autor/g√©neros
     public void UpdateWithServerResponse(string confirmedTitle, string confirmedAuthor, string[] confirmedGenres)
     {
         if (!string.IsNullOrEmpty(confirmedTitle)) title = confirmedTitle;
@@ -229,8 +255,48 @@ public class GlobalBookStore : MonoBehaviour
         genres = string.IsNullOrEmpty(g) ? null : g.Split('|');
     }
 
-    // ===== Biblioteca: API p˙blica =====
+    // ===== Biblioteca: API p√∫blica =====
     public IReadOnlyList<BookRecord> GetLibrary() => library.items;
+    // Devuelve el registro en la biblioteca que corresponde al libro "actual"
+    public BookRecord FindCurrentInLibrary()
+    {
+        foreach (var it in library.items)
+        {
+            if (!string.IsNullOrEmpty(localPath) && it.localPath == localPath) return it;
+            if (!string.IsNullOrEmpty(originalPath) && it.originalPath == originalPath) return it;
+        }
+        return null;
+    }
+
+    // Guarda la p√°gina actual y recalcula %; tambi√©n actualiza pageCount si viene
+    public void UpdateProgress(int pageIndex, int totalPages)
+    {
+        var rec = FindCurrentInLibrary();
+        if (rec == null) return;
+
+        if (totalPages > 0) rec.pageCount = totalPages;
+        rec.lastPage = Mathf.Clamp(pageIndex, 0, Mathf.Max(0, rec.pageCount - 1));
+        rec.progress01 = (rec.pageCount > 0) ? (rec.lastPage + 1f) / rec.pageCount : 0f;
+
+        SaveLibraryToDisk();
+        OnProgressChanged?.Invoke(rec);
+
+    }
+
+    // Asegura tener el total de p√°ginas del libro actual
+    public void EnsurePageCount(int totalPages)
+    {
+        var rec = FindCurrentInLibrary();
+        if (rec == null) return;
+        if (totalPages > 0 && rec.pageCount != totalPages)
+        {
+            rec.pageCount = totalPages;
+            rec.progress01 = (rec.lastPage + 1f) / totalPages;
+            SaveLibraryToDisk();
+            OnProgressChanged?.Invoke(rec);
+
+        }
+    }
 
     public void DeleteFromLibrary(BookRecord rec)
     {
@@ -281,42 +347,76 @@ public class GlobalBookStore : MonoBehaviour
     // ===== Biblioteca: upsert del libro actual =====
     void UpsertCurrentIntoLibrary()
     {
-        var rec = new BookRecord
-        {
-            title = string.IsNullOrEmpty(title) ? Path.GetFileNameWithoutExtension(fileName ?? "Libro") : title,
-            author = author ?? "",
-            genres = genres,
-            originalPath = originalPath,
-            localPath = localPath,
-            fileName = fileName,
-            addedAtIso = DateTime.UtcNow.ToString("o")
-        };
+        if (library == null || library.items == null) return;
 
-        // clave por ruta preferida (local si existe, si no original)
-        string key = !string.IsNullOrEmpty(localPath) ? localPath : originalPath;
-
+        // 1) Buscar existente por path (local u original)
         int idx = -1;
-        if (!string.IsNullOrEmpty(key))
+        for (int i = 0; i < library.items.Count; i++)
         {
-            idx = library.items.FindIndex(x =>
-                (!string.IsNullOrEmpty(x.localPath) && x.localPath == key) ||
-                (!string.IsNullOrEmpty(x.originalPath) && x.originalPath == key));
+            var it = library.items[i];
+            bool matchLocal = !string.IsNullOrEmpty(localPath) && !string.IsNullOrEmpty(it.localPath) && it.localPath == localPath;
+            bool matchOriginal = !string.IsNullOrEmpty(originalPath) && !string.IsNullOrEmpty(it.originalPath) && it.originalPath == originalPath;
+            if (matchLocal || matchOriginal) { idx = i; break; }
         }
+
+        // 2) Fallback por nombre + autor (√∫til para content:// que cambia el path)
         if (idx < 0 && !string.IsNullOrEmpty(fileName))
         {
-            // fallback por nombre (para content://)
-            idx = library.items.FindIndex(x => x.fileName == fileName && x.author == author);
+            idx = library.items.FindIndex(x =>
+                x.fileName == fileName &&
+                (string.IsNullOrEmpty(author) || x.author == author));
         }
 
         if (idx >= 0)
-            library.items[idx] = rec;   // update
+        {
+            // --- UPDATE preservando progreso y fecha de alta ---
+            var it = library.items[idx];
+
+            int keepLastPage = it.lastPage;
+            int keepPageCount = it.pageCount;
+            float keepProgress = it.progress01;
+            string keepAddedAt = it.addedAtIso;
+
+            it.title = string.IsNullOrEmpty(title) ? Path.GetFileNameWithoutExtension(fileName ?? "Libro") : title;
+            it.author = author ?? "";
+            it.genres = genres;
+            it.originalPath = originalPath;
+            it.localPath = localPath;
+            it.fileName = fileName ?? it.fileName;
+
+            // Restaurar progreso previo (no pisar con 0)
+            it.lastPage = keepLastPage;
+            it.pageCount = keepPageCount;
+            it.progress01 = keepProgress;
+            it.addedAtIso = string.IsNullOrEmpty(keepAddedAt) ? DateTime.UtcNow.ToString("o") : keepAddedAt;
+
+            library.items[idx] = it;
+        }
         else
-            library.items.Add(rec);     // insert
+        {
+            // --- INSERT nuevo ---
+            var rec = new BookRecord
+            {
+                title = string.IsNullOrEmpty(title) ? Path.GetFileNameWithoutExtension(fileName ?? "Libro") : title,
+                author = author ?? "",
+                genres = genres,
+                originalPath = originalPath,
+                localPath = localPath,
+                fileName = fileName,
+                addedAtIso = DateTime.UtcNow.ToString("o"),
+                // progreso inicial en 0 solo para NUEVOS
+                lastPage = 0,
+                pageCount = 0,
+                progress01 = 0f
+            };
+            library.items.Add(rec);
+        }
 
         SaveLibraryToDisk();
     }
 
-    // ===== (Opcional) Teleport seg˙n gÈnero ya conocido =====
+
+    // ===== (Opcional) Teleport seg√∫n g√©nero ya conocido =====
     public void TeleportIfPolicial(string escenaPolicial = "Room_Policial")
     {
         if (genres != null)
@@ -344,7 +444,7 @@ public class GlobalBookStore : MonoBehaviour
         Debug.Log($"[Library] Total libros guardados: {total}");
         if (total == 0) yield break;
 
-        // ------ LÌnea ˙nica con todos los nombres (CSV) ------
+        // ------ L√≠nea √∫nica con todos los nombres (CSV) ------
         var names = new System.Collections.Generic.List<string>(total);
         for (int i = 0; i < list.Count; i++)
         {
@@ -358,7 +458,7 @@ public class GlobalBookStore : MonoBehaviour
         }
         Debug.Log($"[LibraryList] {string.Join(", ", names)}");
 
-        // ------ Una lÌnea por Ìtem (con yield para que no se ìpierdanî) ------
+        // ------ Una l√≠nea por √≠tem (con yield para que no se ‚Äúpierdan‚Äù) ------
         for (int i = 0; i < list.Count; i++)
         {
             var it = list[i];
@@ -369,7 +469,7 @@ public class GlobalBookStore : MonoBehaviour
                 "(sin nombre)";
 
             Debug.Log($"[LibraryItem] {i + 1}/{total} -> {name}");
-            yield return null; // da tiempo a Logcat a mostrar la lÌnea
+            yield return null; // da tiempo a Logcat a mostrar la l√≠nea
         }
     }
 
@@ -391,6 +491,8 @@ public class GlobalBookStore : MonoBehaviour
     public void SetCurrentFromRecord(BookRecord rec)
     {
         if (rec == null) return;
+
+        // Solo selecciona el libro actual. NO modificar progreso ac√°.
         originalPath = rec.originalPath;
         localPath = rec.localPath;
         fileName = rec.fileName;
@@ -401,14 +503,15 @@ public class GlobalBookStore : MonoBehaviour
         if (persistAcrossLaunches)
             SaveToPrefs();
 
-        UpsertCurrentIntoLibrary();
+        // ‚ö†Ô∏è NO LLAMAR UpsertCurrentIntoLibrary() AQU√ç
     }
+
 
     public void DeleteRecordAndFile(BookRecord rec, bool deleteFile = true)
     {
         if (rec == null) return;
 
-        // Si era el libro actual, limpi· estado
+        // Si era el libro actual, limpi√° estado
         bool isCurrent = string.Equals(rec.localPath, localPath) || string.Equals(rec.originalPath, originalPath);
         if (isCurrent) ClearCurrent();
 
@@ -423,6 +526,7 @@ public class GlobalBookStore : MonoBehaviour
         library.items.Remove(rec);
         SaveLibraryToDisk();
     }
+
 
 
 }
