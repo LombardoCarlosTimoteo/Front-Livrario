@@ -5,7 +5,7 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/Prueba-1.unity
     guid: 99c9720ab356a0642a771bea13969a05
   - enabled: 0
@@ -20,13 +20,13 @@ EditorBuildSettings:
   - enabled: 0
     path: Assets/Scenes/Room_Policial 2.unity
     guid: 53fb7a79743246945bf2b317b7f69e4b
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/Room_cienciaFiccion.unity
     guid: a5773c4d9874f3f40b7ecf2e9468a08f
   - enabled: 0
     path: Assets/Scenes/Room_fantasia.unity
     guid: 370836a247aa12847a9f2002c1f4045e
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/Room_Fantasia2.unity
     guid: afd3d6e0912217d4e9c80add4beb1da9
   m_configObjects:
