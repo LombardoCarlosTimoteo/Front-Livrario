@@ -35,6 +35,10 @@ public class IniciarLecturaController : MonoBehaviour
     public string escenaCienciaFiccion = "Room_cienciaFiccion";
     public string escenaFantasia = "Room_Fantasia2";
     public string escenaDefault = "Room_cienciaFiccion";       // si hay respuesta pero sin géneros soportados
+    [Header("Loading UI")]
+    public GameObject LoadingCanvasRoot;   // ← Canvas con “Cargando…”
+    public GameObject MenuCanvasRoot;      // ← Canvas del menú
+    public float minLoadingSeconds = 5f;   // ← mínimo que debe verse el loading
 
     [System.Serializable]
     public class BookEnsureResponse
@@ -48,8 +52,124 @@ public class IniciarLecturaController : MonoBehaviour
     // Hookeá este método al OnClick de BtnIniciarLectura
     public void OnBtnIniciarLectura()
     {
-        StartCoroutine(SendAndTeleport());
+        // Mostrar loading y ocultar menú inmediatamente
+        if (LoadingCanvasRoot) LoadingCanvasRoot.SetActive(true);
+        if (MenuCanvasRoot) MenuCanvasRoot.SetActive(false);
+
+        // Lanzar la rutina principal con “mínimo 5s de loading”
+        StartCoroutine(SendAndTeleport_WithMinDelay());
     }
+
+    IEnumerator WaitMinFrom(float t0)
+    {
+        float elapsed = Time.realtimeSinceStartup - t0;
+        float left = minLoadingSeconds - elapsed;
+        if (left > 0f) yield return new WaitForSeconds(left);
+    }
+    IEnumerator SendAndTeleport_WithMinDelay()
+    {
+        float t0 = Time.realtimeSinceStartup;
+
+        // 0) Validaciones y datos base
+        if (GlobalBookStore.I == null)
+        {
+            Debug.LogWarning("[BtnIniciarLectura] GlobalBookStore no está en la escena. Fallback a Policial.");
+            yield return WaitMinFrom(t0);
+            LoadPoliceFallback();
+            yield break;
+        }
+
+        string pdfPath = GlobalBookStore.I.GetBestPath();
+        if (string.IsNullOrEmpty(pdfPath) || !File.Exists(pdfPath))
+        {
+            Debug.LogWarning("[BtnIniciarLectura] No hay PDF válido. Fallback a Policial.");
+            yield return WaitMinFrom(t0);
+            LoadPoliceFallback();
+            yield break;
+        }
+
+        // 1) Título/Autor desde UI (con fallback) y persistir
+        string title = ReadInputSafely(InputTituloLibroTMP, InputTituloLibro);
+        if (string.IsNullOrWhiteSpace(title))
+            title = !string.IsNullOrEmpty(GlobalBookStore.I.FileName)
+                        ? Path.GetFileNameWithoutExtension(GlobalBookStore.I.FileName)
+                        : fallbackTitle;
+
+        string author = ReadInputSafely(InputAutorTMP, InputAutor);
+        if (string.IsNullOrWhiteSpace(author)) author = fallbackAuthor;
+
+        GlobalBookStore.I.UpdateWithServerResponse(title, author, null);
+
+        // 2) Preparar POST multipart
+        string url = baseUrl.TrimEnd('/') + ensurePath;
+        byte[] pdfBytes = null;
+        try { pdfBytes = File.ReadAllBytes(pdfPath); }
+        catch (System.Exception e)
+        {
+            Debug.LogWarning("[BtnIniciarLectura] No se pudo leer el PDF, continuo igual. " + e.Message);
+        }
+
+        var form = new WWWForm();
+        form.AddField("title", title);
+        form.AddField("author", author);
+        if (pdfBytes != null)
+            form.AddBinaryData("pdf", pdfBytes, Path.GetFileName(pdfPath), "application/pdf");
+
+        using (var req = UnityWebRequest.Post(url, form))
+        {
+            req.timeout = Mathf.Max(5, timeoutSeconds);
+            req.SetRequestHeader("Accept", "application/json");
+            Debug.Log($"[Ingest] POST {url}  file={pdfPath}  title='{title}' author='{author}'");
+
+            yield return req.SendWebRequest();
+
+            // 3) FALLBACK si error/timeout
+            if (req.result != UnityWebRequest.Result.Success || req.responseCode < 200 || req.responseCode >= 300)
+            {
+                Debug.LogWarning($"[Ingest] HTTP {req.responseCode} err='{req.error}'. Fallback a Policial.");
+                yield return WaitMinFrom(t0);
+                LoadPoliceFallback();
+                yield break;
+            }
+
+            // 4) Parsear JSON (sin yield en catch)
+            string json = req.downloadHandler.text;
+            Debug.Log($"[Ingest] HTTP {req.responseCode} | {json}");
+
+            BookEnsureResponse resp = null;
+            bool parseOk = true;
+            try
+            {
+                resp = JsonUtility.FromJson<BookEnsureResponse>(json);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning("[Ingest] JSON inválido. " + ex.Message);
+                parseOk = false;
+            }
+
+            if (!parseOk)
+            {
+                yield return WaitMinFrom(t0);
+                LoadPoliceFallback();
+                yield break;
+            }
+
+            // 5) Actualizar store con géneros confirmados
+            GlobalBookStore.I.UpdateWithServerResponse(resp?.title, resp?.author, resp?.genres);
+
+            // 6) Elegir escena
+            string scene = EscenaPorPrimerGeneroSoportado(resp?.genres);
+            if (string.IsNullOrEmpty(scene)) scene = escenaDefault;
+
+            // 7) Respetar mínimo de loading antes de cambiar de escena
+            yield return WaitMinFrom(t0);
+
+            Debug.Log("[Ingest] Cargando escena: " + scene);
+            SceneManager.LoadScene(scene);
+        }
+    }
+
 
     IEnumerator SendAndTeleport()
     {

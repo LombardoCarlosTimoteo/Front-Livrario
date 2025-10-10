@@ -33426,7 +33426,7 @@ PrefabInstance:
     - target: {fileID: 7282562980479558941, guid: 4272bd6725bd64846b07be9b4d76ad90,
         type: 3}
       propertyPath: m_url
-      value: http://chatbot.nicolasirigoyen.com.ar/chatbot/UkrfHZq08auMUJW4
+      value: http://chatbot.nicolasirigoyen.com.ar/chat/NYtmR5AXJUAzfgbY
       objectReference: {fileID: 0}
     - target: {fileID: 7282562980479558941, guid: 4272bd6725bd64846b07be9b4d76ad90,
         type: 3}
@@ -33771,7 +33771,7 @@ PrefabInstance:
     - target: {fileID: 9059994888350486006, guid: 4272bd6725bd64846b07be9b4d76ad90,
         type: 3}
       propertyPath: m_url
-      value: http://chatbot.nicolasirigoyen.com.ar/chatbot/UkrfHZq08auMUJW4
+      value: http://chatbot.nicolasirigoyen.com.ar/chat/NYtmR5AXJUAzfgbY
       objectReference: {fileID: 0}
     - target: {fileID: 9149075876298631760, guid: 4272bd6725bd64846b07be9b4d76ad90,
         type: 3}
