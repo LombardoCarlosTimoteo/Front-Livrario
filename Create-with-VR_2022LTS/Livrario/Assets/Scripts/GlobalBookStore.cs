@@ -35,7 +35,7 @@ public class GlobalBookStore : MonoBehaviour
     public string Author => author;
     public string[] Genres => genres;
     public bool HasBook => !string.IsNullOrEmpty(GetBestPath());
-
+    public string isbn;        // ← ISBN actual del libro cargado globalmente
     // ==== Compatibilidad con scripts viejos ====
     // Calcula "policial" a partir de genres (si hay) o por heurística del nombre de archivo.
     public bool IsPolicial
@@ -88,6 +88,7 @@ public class GlobalBookStore : MonoBehaviour
         public string localPath;
         public string fileName;
         public string addedAtIso;
+        public string isbn;
         // NUEVO
         public int lastPage = 0;      // índice 0-based
         public int pageCount = 0;     // total de páginas
@@ -201,19 +202,19 @@ public class GlobalBookStore : MonoBehaviour
     public void ReloadLibrary() => LoadLibraryFromDisk();
 
     // El backend puede confirmar/ajustar título/autor/géneros
-    public void UpdateWithServerResponse(string newTitle, string newAuthor, string[] newGenres)
+    public void UpdateWithServerResponse(string newTitle, string newAuthor, string[] newGenres, string newIsbn)
     {
         if (!string.IsNullOrEmpty(newTitle)) title = newTitle;
         if (!string.IsNullOrEmpty(newAuthor)) author = newAuthor;
         if (newGenres != null && newGenres.Length > 0) genres = newGenres;
-
+        if (!string.IsNullOrEmpty(newIsbn)) isbn = newIsbn;   // ← guarda ISBN
         var rec = FindCurrentInLibrary();
         if (rec != null)
         {
             if (!string.IsNullOrEmpty(newTitle)) rec.title = newTitle;
             if (!string.IsNullOrEmpty(newAuthor)) rec.author = newAuthor;
             if (newGenres != null && newGenres.Length > 0) rec.genres = newGenres;
-
+            if (!string.IsNullOrEmpty(newIsbn)) rec.isbn = newIsbn; // ← guarda ISBN también en el record
             SaveLibraryToDisk();
             OnMetadataChanged?.Invoke(rec); // ← AVISAR A LA UI
         }
@@ -221,7 +222,10 @@ public class GlobalBookStore : MonoBehaviour
         if (persistAcrossLaunches) SaveToPrefs();
     }
 
-
+    public void UpdateWithServerResponse(string newTitle, string newAuthor, string[] newGenres)
+    {
+        UpdateWithServerResponse(newTitle, newAuthor, newGenres, null);
+    }
     // Ruta preferida para usar dentro de la app
     public string GetBestPath()
         => !string.IsNullOrEmpty(localPath) && File.Exists(localPath) ? localPath : originalPath;
@@ -239,6 +243,7 @@ public class GlobalBookStore : MonoBehaviour
             PlayerPrefs.DeleteKey("book_title");
             PlayerPrefs.DeleteKey("book_author");
             PlayerPrefs.DeleteKey("book_genres");
+            PlayerPrefs.DeleteKey("book_isbn");
             PlayerPrefs.Save();
         }
     }
@@ -251,6 +256,7 @@ public class GlobalBookStore : MonoBehaviour
         PlayerPrefs.SetString("book_title", title ?? "");
         PlayerPrefs.SetString("book_author", author ?? "");
         PlayerPrefs.SetString("book_genres", genres != null ? string.Join("|", genres) : "");
+        PlayerPrefs.SetString("book_isbn", isbn ?? "");
         PlayerPrefs.Save();
     }
 
@@ -261,6 +267,7 @@ public class GlobalBookStore : MonoBehaviour
         fileName = PlayerPrefs.GetString("book_name", "");
         title = PlayerPrefs.GetString("book_title", "");
         author = PlayerPrefs.GetString("book_author", "");
+        isbn = PlayerPrefs.GetString("book_isbn", "");
         var g = PlayerPrefs.GetString("book_genres", "");
         genres = string.IsNullOrEmpty(g) ? null : g.Split('|');
     }
@@ -390,6 +397,8 @@ public class GlobalBookStore : MonoBehaviour
             it.title = string.IsNullOrEmpty(title) ? Path.GetFileNameWithoutExtension(fileName ?? "Libro") : title;
             it.author = author ?? "";
             it.genres = genres;
+            it.isbn = isbn;
+
             it.originalPath = originalPath;
             it.localPath = localPath;
             it.fileName = fileName ?? it.fileName;
@@ -410,6 +419,8 @@ public class GlobalBookStore : MonoBehaviour
                 title = string.IsNullOrEmpty(title) ? Path.GetFileNameWithoutExtension(fileName ?? "Libro") : title,
                 author = author ?? "",
                 genres = genres,
+                isbn = isbn, // ← dentro del inicializador del rec
+
                 originalPath = originalPath,
                 localPath = localPath,
                 fileName = fileName,
@@ -509,7 +520,7 @@ public class GlobalBookStore : MonoBehaviour
         title = rec.title;
         author = rec.author;
         genres = rec.genres;
-
+        isbn = rec.isbn;
         if (persistAcrossLaunches)
             SaveToPrefs();
 

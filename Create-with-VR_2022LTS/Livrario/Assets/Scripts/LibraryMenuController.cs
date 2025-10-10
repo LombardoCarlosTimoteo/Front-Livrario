@@ -278,6 +278,12 @@ public class LibraryMenuController : MonoBehaviour
 
         // Si el registro en disco tiene géneros, usalos; si no, quedate sin géneros (irá al fallback)
         var currentRec = GlobalBookStore.I.FindCurrentInLibrary() ?? rec;
+        GlobalBookStore.I.UpdateWithServerResponse(
+        currentRec.title,
+        currentRec.author,
+        currentRec.genres,
+        currentRec.isbn
+    );
         string[] genres = (currentRec.genres != null && currentRec.genres.Length > 0)
                             ? currentRec.genres
                             : System.Array.Empty<string>();
@@ -338,7 +344,7 @@ public class LibraryMenuController : MonoBehaviour
     {
         if (rec == null || GlobalBookStore.I == null) return;
         GlobalBookStore.I.SetCurrentFromRecord(rec); // ✅ no resetea progreso
-        GlobalBookStore.I.UpdateWithServerResponse(rec.title, rec.author, rec.genres);
+        GlobalBookStore.I.UpdateWithServerResponse(rec.title, rec.author, rec.genres, rec.isbn);
     }
 
 

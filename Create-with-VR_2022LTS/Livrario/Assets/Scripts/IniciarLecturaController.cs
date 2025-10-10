@@ -156,7 +156,7 @@ public class IniciarLecturaController : MonoBehaviour
             }
 
             // 5) Actualizar store con géneros confirmados
-            GlobalBookStore.I.UpdateWithServerResponse(resp?.title, resp?.author, resp?.genres);
+            GlobalBookStore.I.UpdateWithServerResponse(resp?.title, resp?.author, resp?.genres, resp?.isbn);
 
             // 6) Elegir escena
             string scene = EscenaPorPrimerGeneroSoportado(resp?.genres);
@@ -262,7 +262,7 @@ public class IniciarLecturaController : MonoBehaviour
             }
 
             // 5) Actualizar store con géneros confirmados (si los hay)
-            GlobalBookStore.I.UpdateWithServerResponse(resp?.title, resp?.author, resp?.genres);
+            GlobalBookStore.I.UpdateWithServerResponse(resp?.title, resp?.author, resp?.genres, resp?.isbn);
 
             // 6) Elegir escena por PRIMERA coincidencia soportada
             string scene = EscenaPorPrimerGeneroSoportado(resp?.genres);
