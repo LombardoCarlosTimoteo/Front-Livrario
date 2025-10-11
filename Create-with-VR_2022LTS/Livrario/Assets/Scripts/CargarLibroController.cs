@@ -61,8 +61,6 @@ public class CargarLibroController : MonoBehaviour
             // Mostrar el nombre del PDF en el botón
             SetButtonText(Acortar(GlobalBookStore.I.FileName));
 
-            if (autoTeleportPolicial && GlobalBookStore.I.IsPolicial)
-                SceneManager.LoadScene("Room_Policial");
         }, mimes);
     }
 }
