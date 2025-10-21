@@ -1614,8 +1614,8 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 549372555}
-        m_TargetAssemblyTypeName: Scene360Cycler, Assembly-CSharp
+      - m_Target: {fileID: 549372557}
+        m_TargetAssemblyTypeName: Scene360DynamicByIsbn, Assembly-CSharp
         m_MethodName: Next
         m_Mode: 1
         m_Arguments:
@@ -8433,7 +8433,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 549372556}
-  - component: {fileID: 549372555}
+  - component: {fileID: 549372557}
   m_Layer: 0
   m_Name: GameObject (2)
   m_TagString: Untagged
@@ -8441,29 +8441,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &549372555
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 549372554}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3dc775eb920e3404dbce7f593cfd75af, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  urls:
-  - https://livrario-books.obs.la-south-2.myhuaweicloud.com/scenes/123412341234/scene1/scene.jpg
-  - https://livrario-books.obs.la-south-2.myhuaweicloud.com/scenes/123412341234/scene2/scene2.jpg
-  - https://livrario-books.obs.la-south-2.myhuaweicloud.com/scenes/123412341234/scene3/scene3.jpg
-  sphereRenderer: {fileID: 1489121272}
-  applyAsSkybox: 0
-  panoramicSkyboxMaterial: {fileID: 0}
-  startIndex: 0
-  cycleWrap: 1
-  downloadTimeout: 20
-  preloadNext: 1
 --- !u!4 &549372556
 Transform:
   m_ObjectHideFlags: 0
@@ -8479,6 +8456,35 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &549372557
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 549372554}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff9e860282d520c4985c19dd81f4c23b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  sphereRenderer: {fileID: 1489121272}
+  applyAsSkybox: 0
+  panoramicSkyboxMaterial: {fileID: 0}
+  baseScenesUrl: https://livrario-books.obs.la-south-2.myhuaweicloud.com/scenes
+  genreSubfolder: 
+  manifestFileName: manifest.json
+  filePrefix: scene
+  fileExt: .jpg
+  maxProbe: 30
+  stopAfterConsecutiveMisses: 4
+  headTimeout: 10
+  cycleWrap: 1
+  downloadTimeout: 20
+  preloadNext: 1
+  overrideIsbn: 0
+  debugIsbn: 
+  logVerbose: 0
 --- !u!1 &549537652
 GameObject:
   m_ObjectHideFlags: 0
@@ -34571,8 +34577,8 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 549372555}
-        m_TargetAssemblyTypeName: Scene360Cycler, Assembly-CSharp
+      - m_Target: {fileID: 549372557}
+        m_TargetAssemblyTypeName: Scene360DynamicByIsbn, Assembly-CSharp
         m_MethodName: Prev
         m_Mode: 1
         m_Arguments:
