@@ -525,6 +525,7 @@ public class GlobalBookStore : MonoBehaviour
             SaveToPrefs();
 
         // ⚠️ NO LLAMAR UpsertCurrentIntoLibrary() AQUÍ
+        OnMetadataChanged?.Invoke(rec);
     }
 
 

@@ -9218,7 +9218,7 @@ PrefabInstance:
     - target: {fileID: 7282562980479558941, guid: 4272bd6725bd64846b07be9b4d76ad90,
         type: 3}
       propertyPath: m_url
-      value: http://chatbot.nicolasirigoyen.com.ar/chat/NYtmR5AXJUAzfgbY
+      value: 
       objectReference: {fileID: 0}
     - target: {fileID: 7282562980479558941, guid: 4272bd6725bd64846b07be9b4d76ad90,
         type: 3}
@@ -9598,6 +9598,10 @@ PrefabInstance:
         type: 3}
       insertIndex: -1
       addedObject: {fileID: 639512704}
+    - targetCorrespondingSourceObject: {fileID: 8173800033675342686, guid: 4272bd6725bd64846b07be9b4d76ad90,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 639512705}
   m_SourcePrefab: {fileID: 100100000, guid: 4272bd6725bd64846b07be9b4d76ad90, type: 3}
 --- !u!4 &639512701 stripped
 Transform:
@@ -9636,6 +9640,27 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   m_RaycastTriggerInteraction: 1
+--- !u!114 &639512705
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 639512703}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 41c8711ba58768b46b45dba82adecf46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  template: http://www.img-front.nicolasirigoyen.com.ar/?isbn={isbn}
+  targets: []
+  urlFieldOrProperty: Url
+  navigateMethod: LoadUrl
+  applyOnEnable: 1
+  applyDelaySeconds: 0.25
+  skipIfEmptyIsbn: 1
+  includeProgress: 0
+  testIsbnIfEmptyInEditor: 0000000000
 --- !u!1 &642151693
 GameObject:
   m_ObjectHideFlags: 0
@@ -33384,7 +33409,7 @@ PrefabInstance:
     - target: {fileID: 7282562980479558941, guid: 4272bd6725bd64846b07be9b4d76ad90,
         type: 3}
       propertyPath: m_url
-      value: https://drive.google.com/drive/folders/1AW2L0kCxgntpbU6yfsH5oP84_96cB1Lg?usp=sharing
+      value: 
       objectReference: {fileID: 0}
     - target: {fileID: 7282562980479558941, guid: 4272bd6725bd64846b07be9b4d76ad90,
         type: 3}
@@ -33729,7 +33754,7 @@ PrefabInstance:
     - target: {fileID: 9059994888350486006, guid: 4272bd6725bd64846b07be9b4d76ad90,
         type: 3}
       propertyPath: m_url
-      value: https://drive.google.com/drive/folders/1AW2L0kCxgntpbU6yfsH5oP84_96cB1Lg?usp=sharing
+      value: 
       objectReference: {fileID: 0}
     - target: {fileID: 9149075876298631760, guid: 4272bd6725bd64846b07be9b4d76ad90,
         type: 3}
@@ -33764,6 +33789,10 @@ PrefabInstance:
         type: 3}
       insertIndex: -1
       addedObject: {fileID: 1956611870}
+    - targetCorrespondingSourceObject: {fileID: 8173800033675342686, guid: 4272bd6725bd64846b07be9b4d76ad90,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1956611873}
   m_SourcePrefab: {fileID: 100100000, guid: 4272bd6725bd64846b07be9b4d76ad90, type: 3}
 --- !u!4 &1956611867 stripped
 Transform:
@@ -33802,6 +33831,53 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   m_RaycastTriggerInteraction: 1
+--- !u!114 &1956611871 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 9059994888350486006, guid: 4272bd6725bd64846b07be9b4d76ad90,
+    type: 3}
+  m_PrefabInstance: {fileID: 1956611866}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fca9604a793a5814c985948fcaea7bf2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &1956611872 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 7282562980479558941, guid: 4272bd6725bd64846b07be9b4d76ad90,
+    type: 3}
+  m_PrefabInstance: {fileID: 1956611866}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a30eeb3287654d40af425e3881b7cda, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &1956611873
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1956611869}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 41c8711ba58768b46b45dba82adecf46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  template: http://www.img-front.nicolasirigoyen.com.ar/?isbn={isbn}
+  targets:
+  - {fileID: 1956611872}
+  - {fileID: 1956611871}
+  urlFieldOrProperty: Url
+  navigateMethod: LoadUrl
+  applyOnEnable: 1
+  applyDelaySeconds: 0.25
+  skipIfEmptyIsbn: 1
+  includeProgress: 0
+  testIsbnIfEmptyInEditor: 0000000000
 --- !u!1001 &1959255112
 PrefabInstance:
   m_ObjectHideFlags: 0
