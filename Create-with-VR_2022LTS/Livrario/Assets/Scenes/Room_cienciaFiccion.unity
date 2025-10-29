@@ -9660,7 +9660,10 @@ MonoBehaviour:
   applyDelaySeconds: 0.25
   skipIfEmptyIsbn: 1
   includeProgress: 0
+  onlyUpdateOnBucketChange: 1
+  requireValidBucketToUpdate: 1
   testIsbnIfEmptyInEditor: 0000000000
+  testProgressIfEmptyInEditor: 0
 --- !u!1 &642151693
 GameObject:
   m_ObjectHideFlags: 0
@@ -33867,7 +33870,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 41c8711ba58768b46b45dba82adecf46, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  template: http://www.img-front.nicolasirigoyen.com.ar/?isbn={isbn}
+  template: 'http://www.img-front.nicolasirigoyen.com.ar/?isbn={isbn}&progress={p20} '
   targets:
   - {fileID: 1956611872}
   - {fileID: 1956611871}
@@ -33876,8 +33879,11 @@ MonoBehaviour:
   applyOnEnable: 1
   applyDelaySeconds: 0.25
   skipIfEmptyIsbn: 1
-  includeProgress: 0
+  includeProgress: 1
+  onlyUpdateOnBucketChange: 1
+  requireValidBucketToUpdate: 1
   testIsbnIfEmptyInEditor: 0000000000
+  testProgressIfEmptyInEditor: 0
 --- !u!1001 &1959255112
 PrefabInstance:
   m_ObjectHideFlags: 0
