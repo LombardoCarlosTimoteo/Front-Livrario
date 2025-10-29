@@ -5569,11 +5569,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   slider: {fileID: 1435584504}
-  fillImage: {fileID: 0}
-  percentText: {fileID: 1618430428}
-  hideWhenZero: 0
-  smooth: 0
-  smoothSpeed: 8
+  percentLabel: {fileID: 1618430428}
+  bookViewer: {fileID: 1472267187}
+  goToPageMethod: GoToPage
+  totalPagesProp: TotalPages
+  currentPageProp: CurrentPage
+  updateWhileDragging: 1
+  wholeNumbersPercent: 0
 --- !u!114 &385790831
 MonoBehaviour:
   m_ObjectHideFlags: 0

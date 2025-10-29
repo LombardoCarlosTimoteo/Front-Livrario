@@ -1,95 +1,151 @@
+using System;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
+
+/// Interfaz opcional para visores. Si tu visor tiene este método, impleméntala y
+/// el script usará la llamada directa (sin reflexión).
+public interface IBookPager
+{
+    int PageCount { get; }
+    int CurrentPage { get; }
+    void GoToPage(int pageZeroBased);
+}
 
 public class ReadingProgressBar : MonoBehaviour
 {
-    [Header("Asignaciones (elige Slider o Image fill)")]
-    [SerializeField] Slider slider;                 // Opci�n 1: Slider UI (min=0, max=1)
-    [SerializeField] Image fillImage;              // Opci�n 2: Image con Type=Filled (Horizontal)
-    [SerializeField] TMP_Text percentText;          // (opcional) 0�100%
+    [Header("UI")]
+    public Slider slider;                 // 0..1 (normalizado)
+    public TMP_Text percentLabel;         // opcional: "Progreso: 26%"
 
-    [Header("Comportamiento")]
-    [SerializeField] bool hideWhenZero = false;     // ocultar si 0%
-    [SerializeField] bool smooth = false;           // animar suavizado
-    [SerializeField] float smoothSpeed = 8f;
+    [Header("Visor del libro (uno de estos)")]
+    public MonoBehaviour bookViewer;      // arrastrá tu PDFBookViewer (o similar)
+    public string goToPageMethod = "GoToPage"; // si no implementa IBookPager, tratará de invocar esto
+    public string totalPagesProp  = "TotalPages";  // usado si no hay IBookPager
+    public string currentPageProp = "CurrentPage"; // usado si no hay IBookPager
 
-    float _current01 = 0f;
-    float _target01 = 0f;
+    [Header("Opciones")]
+    public bool updateWhileDragging = true;   // si false, salta al soltar (OnPointerUp -> ver nota)
+    public bool wholeNumbersPercent = false;  // etiqueta % redondeada
+
+    bool _ignoreSliderCallback;               // evita bucles
+
+    void Awake()
+    {
+        if (!slider) slider = GetComponentInChildren<Slider>(true);
+        if (slider)
+        {
+            slider.minValue = 0f;
+            slider.maxValue = 1f;
+            slider.wholeNumbers = false;
+            slider.onValueChanged.AddListener(OnSliderChanged);
+        }
+    }
 
     void OnEnable()
     {
-        // Valor inicial desde la lib
-        SetFromLibraryOnce();
-
-        // Suscribirse a cambios de progreso
+        // Reflejar progreso global
         if (GlobalBookStore.I != null)
             GlobalBookStore.I.OnProgressChanged += HandleProgressChanged;
+
+        // Pintar estado inicial si ya hay libro
+        var rec = GlobalBookStore.I?.FindCurrentInLibrary();
+        if (rec != null) ApplyToUI(rec.lastPage, rec.pageCount, rec.progress01);
+        else ApplyToUI(0, 0, 0f);
     }
 
     void OnDisable()
     {
         if (GlobalBookStore.I != null)
             GlobalBookStore.I.OnProgressChanged -= HandleProgressChanged;
+
+        if (slider) slider.onValueChanged.RemoveListener(OnSliderChanged);
     }
 
-    void Update()
+    // -------- Lectura del visor ----------
+    int GetTotalPages()
     {
-        if (!smooth) return;
-        if (Mathf.Approximately(_current01, _target01)) return;
+        if (bookViewer is IBookPager pager) return Mathf.Max(0, pager.PageCount);
 
-        _current01 = Mathf.MoveTowards(_current01, _target01, smoothSpeed * Time.deltaTime);
-        ApplyUI(_current01);
-    }
-
-    // --- API p�blica por si quer�s setear manualmente ---
-    public void SetProgress01(float v01)
-    {
-        v01 = Mathf.Clamp01(v01);
-        _target01 = v01;
-        if (!smooth)
+        if (bookViewer != null)
         {
-            _current01 = v01;
-            ApplyUI(_current01);
+            var t = bookViewer.GetType();
+            var p = t.GetProperty(totalPagesProp) ?? t.GetProperty("pageCount") ?? t.GetProperty("Pages");
+            if (p != null && p.PropertyType == typeof(int))
+                return Mathf.Max(0, (int)p.GetValue(bookViewer));
         }
+
+        // Fallback: lo que tengamos en la biblioteca
+        var rec = GlobalBookStore.I?.FindCurrentInLibrary();
+        return Mathf.Max(0, rec?.pageCount ?? 0);
     }
 
-    // --- Internos ---
+    void JumpToPage(int page)
+    {
+        if (bookViewer is IBookPager pager)
+        {
+            pager.GoToPage(page);
+            return;
+        }
+
+        if (bookViewer != null)
+        {
+            var t = bookViewer.GetType();
+            // GoToPage(int), SetPage(int), ShowPage(int)…
+            var m =
+                t.GetMethod(goToPageMethod, new[] { typeof(int) }) ??
+                t.GetMethod("SetPage", new[] { typeof(int) }) ??
+                t.GetMethod("ShowPage", new[] { typeof(int) }) ??
+                t.GetMethod("GotoPage", new[] { typeof(int) });
+
+            if (m != null) { m.Invoke(bookViewer, new object[] { page }); return; }
+        }
+        Debug.LogWarning("[ReadingProgressBar] No pude invocar GoToPage en el visor.");
+    }
+
+    // --------- Evento: cambio de slider ----------
+    void OnSliderChanged(float v)
+    {
+        if (_ignoreSliderCallback) return;
+        if (!updateWhileDragging && Input.GetMouseButton(0)) return; // si querés solo al soltar (Editor)
+
+        int total = GetTotalPages();
+        if (total <= 0) return;
+
+        // Convertir 0..1 a índice de página (0-based)
+        int targetPage = Mathf.Clamp(Mathf.RoundToInt(v * (total - 1)), 0, total - 1);
+
+        // Saltar y persistir progreso global
+        JumpToPage(targetPage);
+        GlobalBookStore.I?.UpdateProgress(targetPage, total);
+        // OnProgressChanged re-sincroniza UI y dispara BrowserUrlFromIsbn
+    }
+
+    // --------- Evento: progreso cambió en el store ----------
     void HandleProgressChanged(GlobalBookStore.BookRecord rec)
     {
-        // Solo nos importa el libro "actual"
-        var cur = GlobalBookStore.I?.FindCurrentInLibrary();
-        if (cur == null) return;
-
-        // Coincidencia por referencia o por path
-        bool same = ReferenceEquals(cur, rec)
-                    || (!string.IsNullOrEmpty(cur.localPath) && cur.localPath == rec.localPath)
-                    || (!string.IsNullOrEmpty(cur.originalPath) && cur.originalPath == rec.originalPath);
-
-        if (!same) return;
-
-        SetProgress01(rec.progress01);
+        if (rec == null) return;
+        ApplyToUI(rec.lastPage, rec.pageCount, rec.progress01);
     }
 
-    void SetFromLibraryOnce()
+    void ApplyToUI(int pageZero, int total, float progress01)
     {
-        var cur = GlobalBookStore.I?.FindCurrentInLibrary();
-        if (cur != null) SetProgress01(cur.progress01);
-        else ApplyUI(0f);
-    }
-
-    void ApplyUI(float v01)
-    {
-        if (slider) slider.value = v01;
-        if (fillImage) fillImage.fillAmount = v01;
-        if (percentText) percentText.text = Mathf.RoundToInt(v01 * 100f) + "%";
-
-        if (hideWhenZero)
+        // Slider
+        if (slider)
         {
-            bool show = v01 > 0f;
-            if (slider) slider.gameObject.SetActive(show);
-            if (fillImage) fillImage.gameObject.SetActive(show);
-            if (percentText) percentText.gameObject.SetActive(show);
+            _ignoreSliderCallback = true;
+            float val = (total > 1) ? (pageZero / (float)(total - 1)) : 0f;
+            slider.value = Mathf.Clamp01(val);
+            _ignoreSliderCallback = false;
+        }
+
+        // Etiqueta
+        if (percentLabel)
+        {
+            float pct = Mathf.Clamp01(progress01) * 100f;
+            percentLabel.text = wholeNumbersPercent
+                ? $"Progreso: {Mathf.RoundToInt(pct)}%"
+                : $"Progreso: {pct:0.0}%";
         }
     }
 }
