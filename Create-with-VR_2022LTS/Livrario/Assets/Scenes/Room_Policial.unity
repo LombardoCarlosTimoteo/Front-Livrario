@@ -5575,7 +5575,7 @@ MonoBehaviour:
   totalPagesProp: TotalPages
   currentPageProp: CurrentPage
   updateWhileDragging: 1
-  wholeNumbersPercent: 0
+  wholeNumbersPercent: 1
 --- !u!114 &385790831
 MonoBehaviour:
   m_ObjectHideFlags: 0

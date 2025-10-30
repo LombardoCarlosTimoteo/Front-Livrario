@@ -211,4 +211,24 @@ GlobalBookStore.I.UpdateProgress(leftIndex, pageCount);
         lruOrder.Clear();
     }
 
+    // --- NUEVO: salto directo a página desde ReadingProgressBar ---
+public void GoToPage(int pageZeroBased)
+{
+    if (pageCount <= 0) return;
+
+    // Alineamos a la izquierda para mostrar página par en el quad izquierdo
+    int targetLeft = Mathf.Clamp(pageZeroBased - (pageZeroBased % 2), 0, Mathf.Max(0, pageCount - 1));
+
+    leftIndex = targetLeft;
+
+    // Refrescamos la doble página
+    RefreshSpread();
+
+    // Actualizamos progreso global
+    GlobalBookStore.I?.UpdateProgress(leftIndex, pageCount);
+
+    Debug.Log($"[PDFBookViewer] GoToPage -> page={pageZeroBased}, leftIndex={leftIndex}");
+}
+
+
 }
