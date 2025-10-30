@@ -2,6 +2,7 @@ using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
 /// Interfaz opcional para visores. Si tu visor tiene este método, impleméntala y
 /// el script usará la llamada directa (sin reflexión).
@@ -12,7 +13,7 @@ public interface IBookPager
     void GoToPage(int pageZeroBased);
 }
 
-public class ReadingProgressBar : MonoBehaviour
+public class ReadingProgressBar : MonoBehaviour, IPointerUpHandler, IEndDragHandler
 {
     [Header("UI")]
     public Slider slider;                 // 0..1 (normalizado)
@@ -25,10 +26,12 @@ public class ReadingProgressBar : MonoBehaviour
     public string currentPageProp = "CurrentPage"; // usado si no hay IBookPager
 
     [Header("Opciones")]
-    public bool updateWhileDragging = true;   // si false, salta al soltar (OnPointerUp -> ver nota)
-    public bool wholeNumbersPercent = false;  // etiqueta % redondeada
+    public bool updateWhileDragging = false;   // si false, salta al soltar
+    public bool wholeNumbersPercent = false;   // etiqueta % redondeada
 
     bool _ignoreSliderCallback;               // evita bucles
+    float _lastSliderValue;                   // guarda último valor del slider
+    bool _isDragging;                         // indica si el usuario está arrastrando
 
     void Awake()
     {
@@ -38,17 +41,17 @@ public class ReadingProgressBar : MonoBehaviour
             slider.minValue = 0f;
             slider.maxValue = 1f;
             slider.wholeNumbers = false;
-            slider.onValueChanged.AddListener(OnSliderChanged);
+            // Durante el arrastre SOLO tocamos la etiqueta (y opcionalmente vista previa)
+            slider.onValueChanged.AddListener(OnSliderDragging);
         }
     }
 
     void OnEnable()
     {
-        // Reflejar progreso global
         if (GlobalBookStore.I != null)
             GlobalBookStore.I.OnProgressChanged += HandleProgressChanged;
 
-        // Pintar estado inicial si ya hay libro
+        // Estado inicial
         var rec = GlobalBookStore.I?.FindCurrentInLibrary();
         if (rec != null) ApplyToUI(rec.lastPage, rec.pageCount, rec.progress01);
         else ApplyToUI(0, 0, 0f);
@@ -59,7 +62,8 @@ public class ReadingProgressBar : MonoBehaviour
         if (GlobalBookStore.I != null)
             GlobalBookStore.I.OnProgressChanged -= HandleProgressChanged;
 
-        if (slider) slider.onValueChanged.RemoveListener(OnSliderChanged);
+        if (slider) slider.onValueChanged.RemoveListener(OnSliderDragging);
+        _isDragging = false;
     }
 
     // -------- Lectura del visor ----------
@@ -103,22 +107,55 @@ public class ReadingProgressBar : MonoBehaviour
         Debug.LogWarning("[ReadingProgressBar] No pude invocar GoToPage en el visor.");
     }
 
-    // --------- Evento: cambio de slider ----------
-    void OnSliderChanged(float v)
+    // --------- Arrastre del slider ----------
+    void OnSliderDragging(float v)
     {
         if (_ignoreSliderCallback) return;
-        if (!updateWhileDragging && Input.GetMouseButton(0)) return; // si querés solo al soltar (Editor)
 
+        _lastSliderValue = v;
+        _isDragging = true;
+
+        // Actualiza solo la etiqueta durante el arrastre (liviano)
+        UpdateLabelOnly(v);
+
+        if (updateWhileDragging)
+        {
+            // Vista previa opcional (no recomendado con PDFs pesados)
+            ApplyJump(v);
+        }
+    }
+
+    // --------- Al soltar el slider ----------
+    public void OnPointerUp(PointerEventData eventData) => OnPointerUp(); // interfaz
+    public void OnEndDrag(PointerEventData eventData) => OnPointerUp();   // por si termina drag fuera
+
+    // Método público por si usás EventTrigger → Pointer Up
+    public void OnPointerUp()
+    {
+        if (!_isDragging) return;
+        _isDragging = false;
+        ApplyJump(_lastSliderValue);
+    }
+
+    void ApplyJump(float v)
+    {
         int total = GetTotalPages();
         if (total <= 0) return;
 
-        // Convertir 0..1 a índice de página (0-based)
         int targetPage = Mathf.Clamp(Mathf.RoundToInt(v * (total - 1)), 0, total - 1);
-
-        // Saltar y persistir progreso global
         JumpToPage(targetPage);
         GlobalBookStore.I?.UpdateProgress(targetPage, total);
-        // OnProgressChanged re-sincroniza UI y dispara BrowserUrlFromIsbn
+    }
+
+    void UpdateLabelOnly(float v)
+    {
+        if (percentLabel)
+        {
+            float pct = Mathf.Clamp01(v) * 100f;
+            percentLabel.text = wholeNumbersPercent
+                ? $"Progreso: {Mathf.RoundToInt(pct)}%"
+                : $"Progreso: {pct:0.0}%";
+        }
     }
 
     // --------- Evento: progreso cambió en el store ----------
