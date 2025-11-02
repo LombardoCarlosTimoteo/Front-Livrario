@@ -13358,10 +13358,10 @@ RectTransform:
   - {fileID: 856919804}
   m_Father: {fileID: 571619049}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 132.7248, y: -64.85}
-  m_SizeDelta: {x: 265.4496, y: 129.7}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &788744999
 MonoBehaviour:
@@ -15288,10 +15288,10 @@ RectTransform:
   - {fileID: 261662766}
   m_Father: {fileID: 788744998}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 132.7248, y: -108.083336}
-  m_SizeDelta: {x: 265.4496, y: 43.233334}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &856919805
 MonoBehaviour:
@@ -15784,10 +15784,10 @@ RectTransform:
   - {fileID: 842634964}
   m_Father: {fileID: 788744998}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 132.7248, y: -64.85}
-  m_SizeDelta: {x: 265.4496, y: 43.233334}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &883614406
 MonoBehaviour:
@@ -17539,7 +17539,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &1027777427
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -24380,10 +24380,10 @@ RectTransform:
   - {fileID: 2117729725}
   m_Father: {fileID: 788744998}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 132.7248, y: -21.616667}
-  m_SizeDelta: {x: 265.4496, y: 43.233334}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1366474968
 MonoBehaviour:
@@ -30315,7 +30315,7 @@ PrefabInstance:
     - target: {fileID: 9059994888350486006, guid: 4272bd6725bd64846b07be9b4d76ad90,
         type: 3}
       propertyPath: m_url
-      value: https://www.wikipedia.org
+      value: http://chatbot.nicolasirigoyen.com.ar/chat/NYtmR5AXJUAzfgbY
       objectReference: {fileID: 0}
     - target: {fileID: 9059994888350486006, guid: 4272bd6725bd64846b07be9b4d76ad90,
         type: 3}
@@ -30393,7 +30393,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   webView: {fileID: 1700517625}
-  url: https://www.wikipedia.org
+  url: http://chatbot.nicolasirigoyen.com.ar/chat/NYtmR5AXJUAzfgbY
 --- !u!1 &1710241291
 GameObject:
   m_ObjectHideFlags: 0

@@ -1,4 +1,4 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using UnityEngine.UI;
 using System.IO;
 using TMPro;                     // usamos TMP directamente
@@ -7,13 +7,13 @@ using UnityEngine.SceneManagement;
 [RequireComponent(typeof(Button))]
 public class CargarLibroController : MonoBehaviour
 {
-    [Header("UI (se autocompleta si lo dejas vacío)")]
-    [SerializeField] private Button boton;        // este mismo botón
+    [Header("UI (se autocompleta si lo dejas vacÃ­o)")]
+    [SerializeField] private Button boton;        // este mismo botÃ³n
     [SerializeField] private TMP_Text labelTMP;   // hijo con texto (TMP)
     [SerializeField] private Text labelUGUI;      // por si usas Text normal
     [SerializeField] private string textoDefault = "Cargar libro";
 
-    [Header("Lógica")]
+    [Header("LÃ³gica")]
     [SerializeField] private bool autoTeleportPolicial = true;
 
     void Awake()
@@ -39,7 +39,7 @@ public class CargarLibroController : MonoBehaviour
         return (baseName.Length <= max) ? baseName : (baseName.Substring(0, max - 3) + "...");
     }
 
-    // Conectá ESTE método al OnClick del botón
+    // ConectÃ¡ ESTE mÃ©todo al OnClick del botÃ³n
     public void OnBtnCargarLibro()
     {
         SetButtonText("Abriendo...");
@@ -58,7 +58,7 @@ public class CargarLibroController : MonoBehaviour
 
             GlobalBookStore.I.SetFromPickerPath(path);
 
-            // Mostrar el nombre del PDF en el botón
+            // Mostrar el nombre del PDF en el botÃ³n
             SetButtonText(Acortar(GlobalBookStore.I.FileName));
 
         }, mimes);
