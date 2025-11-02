@@ -10178,10 +10178,6 @@ PrefabInstance:
         type: 3}
       insertIndex: -1
       addedObject: {fileID: 639512704}
-    - targetCorrespondingSourceObject: {fileID: 8173800033675342686, guid: 4272bd6725bd64846b07be9b4d76ad90,
-        type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 639512705}
   m_SourcePrefab: {fileID: 100100000, guid: 4272bd6725bd64846b07be9b4d76ad90, type: 3}
 --- !u!4 &639512701 stripped
 Transform:
@@ -10220,30 +10216,6 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   m_RaycastTriggerInteraction: 1
---- !u!114 &639512705
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 639512703}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 41c8711ba58768b46b45dba82adecf46, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  template: http://www.img-front.nicolasirigoyen.com.ar/?isbn={isbn}
-  targets: []
-  urlFieldOrProperty: Url
-  navigateMethod: LoadUrl
-  applyOnEnable: 1
-  applyDelaySeconds: 0.25
-  skipIfEmptyIsbn: 1
-  includeProgress: 0
-  onlyUpdateOnBucketChange: 1
-  requireValidBucketToUpdate: 1
-  testIsbnIfEmptyInEditor: 0000000000
-  testProgressIfEmptyInEditor: 0
 --- !u!1 &642151693
 GameObject:
   m_ObjectHideFlags: 0
