@@ -26895,6 +26895,7 @@ MonoBehaviour:
   applyAsSkybox: 0
   panoramicSkyboxMaterial: {fileID: 0}
   baseScenesUrl: https://livrario-books.obs.la-south-2.myhuaweicloud.com/scenes
+  strictBucketOnly: 1
   genreSubfolder: 
   manifestFileName: manifest.json
   filePrefix: scene
@@ -26907,7 +26908,9 @@ MonoBehaviour:
   preloadNext: 1
   overrideIsbn: 0
   debugIsbn: 
-  logVerbose: 0
+  logVerbose: 1
+  clearOnFail: 1
+  forceRedownloadOnce: 0
 --- !u!4 &1407261712
 Transform:
   m_ObjectHideFlags: 0
